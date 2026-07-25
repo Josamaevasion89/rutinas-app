@@ -13,6 +13,19 @@ st.set_page_config(
 )
 
 # -----------------------------------------------------------------------------
+# OCULTAR GITHUB, FORK Y MENÚS DE STREAMLIT (ESTILO LIMPIO VIP)
+# -----------------------------------------------------------------------------
+ocultar_github_css = """
+    <style>
+    #MainMenu {visibility: hidden;}
+    header {visibility: hidden;}
+    footer {visibility: hidden;}
+    .stAppDeployButton {display:none;}
+    </style>
+"""
+st.markdown(ocultar_github_css, unsafe_allow_html=True)
+
+# -----------------------------------------------------------------------------
 # GESTIÓN DE ACCESO Y AUTENTICACIÓN
 # -----------------------------------------------------------------------------
 USUARIOS_ACTIVOS = {
