@@ -58,7 +58,7 @@ if not st.session_state.autenticado:
 # LÓGICA DE NEGOCIO Y DATOS
 # -----------------------------------------------------------------------------
 
-# Header superior con usuario y cerrar sesión
+# Header superior
 col_usr1, col_usr2 = st.columns([3, 1])
 with col_usr1:
     st.caption(f"👤 **Usuario activo:** `{st.session_state.usuario_actual}`")
@@ -154,7 +154,7 @@ def generar_link_google_calendar(
     return f"https://calendar.google.com/calendar/render?{urllib.parse.urlencode(params)}"
 
 
-# Variables de Estado de Sesión
+# Estado de Sesión
 if "paso_actual" not in st.session_state:
     st.session_state.paso_actual = 0
 if "df_rutina" not in st.session_state:
@@ -167,12 +167,11 @@ if "modo_entrenamiento" not in st.session_state:
     st.session_state.modo_entrenamiento = False
 
 # -----------------------------------------------------------------------------
-# ESTRUCTURA EN LA PARTE SUPERIOR (CONFIGURADOR)
+# CONFIGURADOR SUPERIOR
 # -----------------------------------------------------------------------------
 
 st.title("🏋️‍♂️ Generador Inteligente de Rutinas")
 
-# Desplegable superior para no ocupar espacio en pantalla de móvil
 with st.expander("⚙️ Configurar Parámetros del Entrenamiento", expanded=(st.session_state.df_rutina is None)):
     col_n1, col_n2 = st.columns([1, 2])
 
@@ -234,13 +233,13 @@ with st.expander("⚙️ Configurar Parámetros del Entrenamiento", expanded=(st
             st.session_state.tiempo_estimado = round(tiempo_total_seg / 60)
             st.session_state.paso_actual = 0
             st.session_state.nivel_seleccionado = nivel_seleccionado
-            st.session_state.modo_entrenamiento = False  # Mostrar primero el resumen
+            st.session_state.modo_entrenamiento = False
             st.rerun()
 
 st.markdown("---")
 
 # -----------------------------------------------------------------------------
-# FASE 1: VISTA PREVIA DE LA RUTINA & GOOGLE CALENDAR
+# FASE 1: RESUMEN DE RUTINA & GOOGLE CALENDAR
 # -----------------------------------------------------------------------------
 
 if st.session_state.df_rutina is not None and not st.session_state.modo_entrenamiento:
@@ -250,15 +249,12 @@ if st.session_state.df_rutina is not None and not st.session_state.modo_entrenam
 
     st.success(f"🔥 **¡Rutina Generada con Éxito!** ({len(df_rutina)} ejercicios seleccionados)")
 
-    # Métricas principales
     m1, m2, m3 = st.columns(3)
     m1.metric("🏋️ Fuerza / Abs", f"{tiempo_ejercicios} min")
     m2.metric("🧘 Estiramientos", f"{TIEMPO_ESTIRAMIENTOS_MIN} min")
     m3.metric("⏱️ Tiempo Total", f"{tiempo_total_sesion} min")
 
     st.markdown("### 📋 Resumen de Ejercicios Generados")
-    
-    # Tabla resumen compacta
     for idx, (_, row) in enumerate(df_rutina.iterrows(), start=1):
         prescripcion, _, _, _ = obtener_prescripcion_y_tiempo(
             st.session_state.nivel_seleccionado, row.get("Grupo Muscular", "")
@@ -267,7 +263,6 @@ if st.session_state.df_rutina is not None and not st.session_state.modo_entrenam
 
     st.markdown("---")
 
-    # Enlace a Google Calendar
     nombres_ejercicios = ", ".join(df_rutina["Nombre"].tolist())
     titulo_evento = f"🏋️‍♂️ Entrenamiento VIP ({tiempo_total_sesion} min) - {st.session_state.usuario_actual}"
     descripcion_evento = (
@@ -296,7 +291,7 @@ if st.session_state.df_rutina is not None and not st.session_state.modo_entrenam
             st.rerun()
 
 # -----------------------------------------------------------------------------
-# FASE 2: MODO ENTRENAMIENTO GUIADO (PASO A PASO)
+# FASE 2: MODO ENTRENAMIENTO GUIADO (PASO A PASO + TEMPORIZADOR CON AUDIO)
 # -----------------------------------------------------------------------------
 
 elif st.session_state.df_rutina is not None and st.session_state.modo_entrenamiento:
@@ -305,7 +300,6 @@ elif st.session_state.df_rutina is not None and st.session_state.modo_entrenamie
     total_pasos = total_ejercicios + 1
     paso_actual = st.session_state.paso_actual
 
-    # Barra de progreso
     progreso_porcentaje = min(float(paso_actual / total_pasos), 1.0)
     st.progress(progreso_porcentaje)
 
@@ -318,7 +312,6 @@ elif st.session_state.df_rutina is not None and st.session_state.modo_entrenamie
 
     st.markdown("---")
 
-    # Mostrar ejercicio actual
     if paso_actual < total_ejercicios:
         row = df_rutina.iloc[paso_actual]
         nivel_sel = st.session_state.nivel_seleccionado
@@ -351,14 +344,31 @@ elif st.session_state.df_rutina is not None and st.session_state.modo_entrenamie
 
         st.markdown("---")
 
-        # Temporizador
+        # TEMPORIZADOR CON ALARMA SONORA
         st.markdown("### ⏱️ Temporizador de Descanso / Trabajo")
+        URL_SONIDO_ALARMA = "https://actions.google.com/sounds/v1/alarms/beep_short.ogg"
+
         if st.button(f"⏳ Iniciar Descanso ({descanso_seg}s)", use_container_width=True):
             ph = st.empty()
             for t in range(descanso_seg, -1, -1):
                 ph.metric("Tiempo Restante", f"{t} seg")
                 time.sleep(1)
+
             ph.success("🔔 ¡Tiempo finalizado! Siguiente serie o ejercicio.")
+
+            # Reproducción de audio en el navegador
+            st.components.v1.html(
+                f"""
+                <audio autoplay style="display:none;">
+                    <source src="{URL_SONIDO_ALARMA}" type="audio/ogg">
+                </audio>
+                <script>
+                    var audio = document.querySelector('audio');
+                    if (audio) {{ audio.play(); }}
+                </script>
+                """,
+                height=0,
+            )
 
         st.markdown("---")
         col_nav1, col_nav2 = st.columns([1, 1])
@@ -374,7 +384,6 @@ elif st.session_state.df_rutina is not None and st.session_state.modo_entrenamie
                 st.session_state.paso_actual += 1
                 st.rerun()
 
-    # Bloque final de estiramientos
     elif paso_actual == total_ejercicios:
         st.subheader("🧘 Bloque de Enfriamiento y Estiramientos (10 min)")
         st.markdown(
@@ -397,7 +406,6 @@ elif st.session_state.df_rutina is not None and st.session_state.modo_entrenamie
                 st.session_state.paso_actual += 1
                 st.rerun()
 
-    # Pantalla final
     else:
         st.balloons()
         st.success("🎉 ¡ENHORABUENA! Has completado tu entrenamiento de hoy.")
