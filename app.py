@@ -1,537 +1,388 @@
+import streamlit as st
+import pandas as pd
+import datetime
 import time
 import urllib.parse
-from datetime import datetime, timedelta
-import unicodedata
-import pandas as pd
-import streamlit as st
+from PIL import Image
+import io
 
-# 1. Configuración de la página
+# ==========================================
+# 1. CONFIGURACIÓN DE PÁGINA Y ESTILOS UI
+# ==========================================
 st.set_page_config(
-    page_title="RUTINAS W360",
+    page_title="Rehab & Fitness Pro App",
     page_icon="🏋️‍♂️",
     layout="wide",
+    initial_sidebar_state="expanded"
 )
 
-# -----------------------------------------------------------------------------
-# CSS PERSONALIZADO (ESTILO W360: BORDES REDONDEADOS, TARJETAS Y CENTRADO)
-# -----------------------------------------------------------------------------
-st.markdown(
-    """
-    <style>
-    /* Ocultar elementos de Streamlit y GitHub */
-    #MainMenu {visibility: hidden;}
-    header {visibility: hidden;}
-    footer {visibility: hidden;}
-    .stAppDeployButton {display:none;}
-
-    /* Tipografía para el título principal */
-    .titulo-w360 {
-        font-size: 1.6rem !important;
-        font-weight: 800;
-        letter-spacing: -0.5px;
-        color: #1E293B;
+st.markdown("""
+<style>
+    /* Estilos personalizados */
+    .main-header {
+        font-size: 2.2rem;
+        font-weight: 700;
+        color: #1E3A8A;
         margin-bottom: 0.5rem;
     }
-
-    /* Botón de Generar Rutina (Súper Redondeado) */
-    div.stButton > button[key="btn_generar"] {
-        border-radius: 25px !important;
-        padding: 0.5rem 2rem !important;
-        font-weight: 700 !important;
-        margin: 0 auto;
-        display: block;
+    .sub-header {
+        font-size: 1.1rem;
+        color: #4B5563;
+        margin-bottom: 1.5rem;
     }
-
-    /* Botones de acción rectangulares con bordes suavemente redondeados */
-    .stButton > button {
-        border-radius: 10px !important;
-        font-weight: 600 !important;
+    .card {
+        background-color: #F9FAFB;
+        border-radius: 10px;
+        padding: 1.2rem;
+        border: 1px solid #E5E7EB;
+        margin-bottom: 1rem;
     }
-
-    /* Tarjeta de Prescripción atractiva */
-    .prescripcion-card {
-        background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+    .badge-pain {
+        background-color: #FEE2E2;
+        color: #991B1B;
+        padding: 0.2rem 0.6rem;
         border-radius: 12px;
-        padding: 1rem;
-        text-align: center;
-        margin: 1rem 0;
-        border: 1px solid #cbd5e1;
+        font-weight: 600;
+        font-size: 0.85rem;
     }
-    .prescripcion-series {
-        font-size: 1.25rem;
-        font-weight: 700;
-        color: #0f172a;
+    .badge-pathology {
+        background-color: #DBEAFE;
+        color: #1E40AF;
+        padding: 0.2rem 0.6rem;
+        border-radius: 12px;
+        font-weight: 600;
+        font-size: 0.85rem;
     }
-    .prescripcion-descanso {
-        font-size: 0.95rem;
-        color: #475569;
-        margin-top: 0.3rem;
-    }
+</style>
+""", unsafe_allow_html=True)
 
-    /* Centrado del Temporizador */
-    .temp-container {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        text-align: center;
-        margin: 1rem 0;
-    }
-    </style>
-""",
-    unsafe_allow_html=True,
-)
+# ==========================================
+# 2. GESTIÓN DE SESIÓN Y LOGIN (MEMBRESÍAS)
+# ==========================================
+if "authenticated" not in st.session_state:
+    st.session_state.authenticated = False
+if "user_tier" not in st.session_state:
+    st.session_state.user_tier = "Free"
+if "username" not in st.session_state:
+    st.session_state.username = ""
 
-# -----------------------------------------------------------------------------
-# GESTIÓN DE ACCESO Y AUTENTICACIÓN
-# -----------------------------------------------------------------------------
-USUARIOS_ACTIVOS = {
-    "Josama": "1980",
-    "cliente_demo": "fitness2026",
+# Usuarios de prueba (puedes conectarlo a una base de datos real)
+USER_DB = {
+    "paciente1": {"password": "123", "tier": "Premium", "name": "Carlos M."},
+    "terapeuta": {"password": "admin", "tier": "Pro Clinica", "name": "Dr. Osteópata"},
+    "usuario": {"password": "123", "tier": "Básico", "name": "Juan P."}
 }
 
-if "autenticado" not in st.session_state:
-    st.session_state.autenticado = False
-if "usuario_actual" not in st.session_state:
-    st.session_state.usuario_actual = ""
-
-
-def pantalla_login():
-    st.markdown("---")
+def login_screen():
+    st.markdown("<h1 style='text-align: center;'>🔐 Acceso a la Plataforma</h1>", unsafe_allow_html=True)
     col1, col2, col3 = st.columns([1, 2, 1])
-
     with col2:
-        st.markdown(
-            "<h2 style='text-align: center;'>🔒 Acceso W360</h2>",
-            unsafe_allow_html=True,
-        )
-        st.write("Ingresa tus credenciales para continuar:")
+        with st.form("login_form"):
+            user_input = st.text_input("Usuario")
+            pass_input = st.text_input("Contraseña", type="password")
+            submit = st.form_submit_button("Iniciar Sesión", use_container_width=True)
 
-        usuario_input = st.text_input("Usuario")
-        password_input = st.text_input("Contraseña", type="password")
+            if submit:
+                if user_input in USER_DB and USER_DB[user_input]["password"] == pass_input:
+                    st.session_state.authenticated = True
+                    st.session_state.username = USER_DB[user_input]["name"]
+                    st.session_state.user_tier = USER_DB[user_input]["tier"]
+                    st.success("¡Bienvenido/a!")
+                    st.rerun()
+                else:
+                    st.error("Usuario o contraseña incorrectos")
 
-        if st.button("Iniciar Sesión", type="primary", use_container_width=True):
-            if (
-                usuario_input in USUARIOS_ACTIVOS
-                and USUARIOS_ACTIVOS[usuario_input] == password_input
-            ):
-                st.session_state.autenticado = True
-                st.session_state.usuario_actual = usuario_input
-                st.success(f"¡Bienvenido/a, {usuario_input}!")
-                st.rerun()
-            else:
-                st.error("Usuario o contraseña incorrectos.")
-
-
-if not st.session_state.autenticado:
-    pantalla_login()
-    st.stop()
-
-# -----------------------------------------------------------------------------
-# LÓGICA DE DATOS
-# -----------------------------------------------------------------------------
-
-col_usr1, col_usr2 = st.columns([3, 1])
-with col_usr1:
-    st.caption(f"👤 **Cliente:** `{st.session_state.usuario_actual}`")
-with col_usr2:
-    if st.button("🚪 Salir", use_container_width=True):
-        st.session_state.autenticado = False
-        st.session_state.usuario_actual = ""
-        st.session_state.paso_actual = 0
-        st.session_state.df_rutina = None
-        st.session_state.modo_entrenamiento = False
-        st.rerun()
-
-
-def normalizar_texto(texto):
-    if not isinstance(texto, str):
-        return ""
-    texto = texto.lower().strip()
-    return "".join(
-        c
-        for c in unicodedata.normalize("NFD", texto)
-        if unicodedata.category(c) != "Mn"
-    )
-
-
+# ==========================================
+# 3. CARGA DE DATOS DE EXCEL
+# ==========================================
 @st.cache_data
-def cargar_ejercicios():
-    df = pd.read_excel("ejercicios.xlsx")
-    for col in df.columns:
-        if "patron" in col.lower() or "patrón" in col.lower():
-            df[col] = df[col].fillna("-")
-    if "Material" in df.columns:
-        df["Material"] = df["Material"].fillna("-")
-    return df
+def get_mock_data():
+    """Genera datos de prueba si no hay un archivo Excel cargado."""
+    return pd.DataFrame([
+        {
+            "ID": "EJ01",
+            "Nombre": "Puente de Glúteo Isométrico",
+            "Categoria": "Fuerza / Estabilidad",
+            "Grupo_Muscular": "Cadera / Core",
+            "Patologia": "Lumbalgia",
+            "Dolor_Max_Recomendado": 4,
+            "Series": 3,
+            "Repeticiones": "10 reps (sostener 5s)",
+            "Descanso_Seg": 45,
+            "Imagen_URL": "https://via.placeholder.com/400x250.png?text=Puente+de+Glutaeo",
+            "Instrucciones": "Mantener pelvis neutra, contraer glúteos sin hiperextender la zona lumbar."
+        },
+        {
+            "ID": "EJ02",
+            "Nombre": "Movilización Neurodinámica Nervio Ciático",
+            "Categoria": "Movilidad",
+            "Grupo_Muscular": "Cadera / Pierna",
+            "Patologia": "Ciatalgia",
+            "Dolor_Max_Recomendado": 3,
+            "Series": 2,
+            "Repeticiones": "15 oscilaciones suaves",
+            "Descanso_Seg": 30,
+            "Imagen_URL": "https://via.placeholder.com/400x250.png?text=Neurodinamia+Ciatico",
+            "Instrucciones": "Movimiento rítmico de tobillo coordinado con flexión cervical sin provocar dolor agudo."
+        },
+        {
+            "ID": "EJ03",
+            "Nombre": "Rotación Externa de Hombro con Banda",
+            "Categoria": "Fuerza",
+            "Grupo_Muscular": "Hombro / Manguito Rotador",
+            "Patologia": "Tendinopatía Manguito Rotador",
+            "Dolor_Max_Recomendado": 5,
+            "Series": 3,
+            "Repeticiones": "12 reps",
+            "Descanso_Seg": 60,
+            "Imagen_URL": "https://via.placeholder.com/400x250.png?text=Rotacion+Hombro",
+            "Instrucciones": "Mantener codo pegado al cuerpo a 90°. Controlar la fase excéntrica."
+        },
+        {
+            "ID": "EJ04",
+            "Nombre": "Cat-Cow (Gato-Camello)",
+            "Categoria": "Movilidad / Flexibilidad",
+            "Grupo_Muscular": "Columna Vertebral",
+            "Patologia": "Rigidez Lumbar",
+            "Dolor_Max_Recomendado": 2,
+            "Series": 3,
+            "Repeticiones": "10 ciclos",
+            "Descanso_Seg": 30,
+            "Imagen_URL": "https://via.placeholder.com/400x250.png?text=Cat-Cow",
+            "Instrucciones": "Mover articulación por articulación sincronizando con la respiración."
+        }
+    ])
 
+def load_exercise_database(uploaded_file):
+    if uploaded_file is not None:
+        try:
+            df = pd.read_excel(uploaded_file)
+            return df
+        except Exception as e:
+            st.error(f"Error al leer el archivo Excel: {e}")
+            return get_mock_data()
+    return get_mock_data()
 
-try:
-    df_ejercicios = cargar_ejercicios()
-except Exception as e:
-    st.error(f"Error al cargar 'ejercicios.xlsx': {e}")
-    st.stop()
-
-
-def obtener_prescripcion_y_tiempo(nivel, grupo_muscular):
-    grupo = normalizar_texto(str(grupo_muscular))
-
-    if "gluteo" in grupo:
-        descanso_seg = 30
-    elif "abdom" in grupo:
-        descanso_seg = 15
-    else:
-        descanso_seg = 60 if nivel == "Básico" else 45
-
-    if nivel == "Básico":
-        num_series = 3
-        reps_texto = "10-12 reps" if "abdom" not in grupo else "30 seg trabajo"
-        tiempo_ejecucion_serie = 35
-    elif nivel == "Intermedio":
-        num_series = 4
-        reps_texto = "12-15 reps" if "abdom" not in grupo else "45 seg trabajo"
-        tiempo_ejecucion_serie = 40
-    else:
-        num_series = 4
-        reps_texto = "15-20 reps" if "abdom" not in grupo else "60 seg trabajo"
-        tiempo_ejecucion_serie = 45
-
-    tiempo_ejercicio_seg = (num_series * tiempo_ejecucion_serie) + (
-        (num_series - 1) * descanso_seg
-    ) + 30
-    series_reps = f"{num_series} series × {reps_texto}"
-
-    return series_reps, descanso_seg, tiempo_ejercicio_seg
-
-
-def generar_link_google_calendar(
-    titulo, descripcion, duracion_minutos=60, fecha_inicio=None
-):
-    if fecha_inicio is None:
-        manana = datetime.now() + timedelta(days=1)
-        fecha_inicio = manana.replace(hour=10, minute=0, second=0, microsecond=0)
-
-    fecha_fin = fecha_inicio + timedelta(minutes=duracion_minutos)
+# ==========================================
+# 4. UTILIDADES: GOOGLE CALENDAR Y ALARMA
+# ==========================================
+def generate_google_calendar_url(title, description, start_dt, duration_minutes=45):
+    end_dt = start_dt + datetime.timedelta(minutes=duration_minutes)
+    
     fmt = "%Y%m%dT%H%M%SZ"
-    dates_str = f"{fecha_inicio.strftime(fmt)}/{fecha_fin.strftime(fmt)}"
-
+    dates_str = f"{start_dt.strftime(fmt)}/{end_dt.strftime(fmt)}"
+    
     params = {
         "action": "TEMPLATE",
-        "text": titulo,
-        "details": descripcion,
-        "dates": dates_str,
+        "text": title,
+        "details": description,
+        "dates": dates_str
     }
     return f"https://calendar.google.com/calendar/render?{urllib.parse.urlencode(params)}"
 
-
-# Estado de Sesión
-if "paso_actual" not in st.session_state:
-    st.session_state.paso_actual = 0
-if "df_rutina" not in st.session_state:
-    st.session_state.df_rutina = None
-if "tiempo_estimado" not in st.session_state:
-    st.session_state.tiempo_estimado = 0
-if "nivel_seleccionado" not in st.session_state:
-    st.session_state.nivel_seleccionado = "Básico"
-if "modo_entrenamiento" not in st.session_state:
-    st.session_state.modo_entrenamiento = False
-
-# -----------------------------------------------------------------------------
-# CONFIGURADOR DE RUTINA
-# -----------------------------------------------------------------------------
-
-if not st.session_state.modo_entrenamiento:
-    st.markdown("<div class='titulo-w360'>RUTINAS W360</div>", unsafe_allow_html=True)
-
-    with st.expander(
-        "⚙️ Configurar Parámetros", expanded=(st.session_state.df_rutina is None)
-    ):
-        col_n1, col_n2 = st.columns([1, 2])
-
-        with col_n1:
-            niveles_disponibles = df_ejercicios["Nivel"].dropna().unique().tolist()
-            nivel_seleccionado = st.selectbox(
-                "Nivel de Progresión", niveles_disponibles
-            )
-
-        with col_n2:
-            st.write("**Ejercicios por grupo muscular:**")
-            c_p, c_c, c_g, c_a = st.columns(4)
-            num_piernas = c_p.number_input("Piernas", 0, 10, value=2)
-            num_pecho = c_c.number_input("Pecho", 0, 10, value=2)
-            num_gluteos = c_g.number_input("Glúteos", 0, 10, value=2)
-            num_abs = c_a.number_input("Abs", 0, 10, value=4)
-
-        solicitudes = {
-            "Piernas": num_piernas,
-            "Pecho": num_pecho,
-            "Gluteos": num_gluteos,
-            "Abdominales": num_abs,
+def play_sound_alarm():
+    # Reproduce una alerta sonora usando HTML5 Web Audio API sin depender de archivos locales
+    audio_script = """
+        <script>
+        var ctx = new (window.AudioContext || window.webkitAudioContext)();
+        function beep(freq, duration) {
+            var osc = ctx.createOscillator();
+            osc.type = 'sine';
+            osc.frequency.value = freq;
+            osc.connect(ctx.destination);
+            osc.start();
+            setTimeout(function() { osc.stop(); }, duration);
         }
+        beep(880, 500);
+        setTimeout(function() { beep(1174.66, 700); }, 200);
+        </script>
+    """
+    st.components.v1.html(audio_script, height=0)
 
-        TIEMPO_MAXIMO_TOTAL_MIN = 60
-        TIEMPO_ESTIRAMIENTOS_MIN = 10
-        TIEMPO_MAXIMO_RUTINA_MIN = TIEMPO_MAXIMO_TOTAL_MIN - TIEMPO_ESTIRAMIENTOS_MIN
-
-        _, col_btn_centrado, _ = st.columns([1, 2, 1])
-        with col_btn_centrado:
-            if st.button(
-                "⚡ Generar Rutina Personalizada",
-                key="btn_generar",
-                type="primary",
-                use_container_width=True,
-            ):
-                rutina_lista = []
-                df_temp = df_ejercicios.copy()
-                df_temp["_grupo_norm"] = df_temp["Grupo Muscular"].apply(normalizar_texto)
-
-                for grupo, cantidad in solicitudes.items():
-                    if cantidad > 0:
-                        grupo_busqueda = normalizar_texto(grupo)
-                        df_grupo = df_temp[
-                            (df_temp["_grupo_norm"].str.contains(grupo_busqueda, na=False))
-                            & (df_temp["Nivel"] == nivel_seleccionado)
-                        ]
-                        if not df_grupo.empty:
-                            muestra = df_grupo.sample(n=min(cantidad, len(df_grupo)))
-                            rutina_lista.append(muestra)
-
-                if rutina_lista:
-                    df_rutina = pd.concat(rutina_lista).reset_index(drop=True)
-                    tiempo_total_seg = 0
-                    indices_a_conservar = []
-
-                    for idx, row in df_rutina.iterrows():
-                        _, _, tiempo_ej_seg = obtener_prescripcion_y_tiempo(
-                            nivel_seleccionado, row.get("Grupo Muscular", "")
-                        )
-                        if (
-                            tiempo_total_seg + tiempo_ej_seg
-                        ) / 60 <= TIEMPO_MAXIMO_RUTINA_MIN:
-                            tiempo_total_seg += tiempo_ej_seg
-                            indices_a_conservar.append(idx)
-
-                    st.session_state.df_rutina = df_rutina.loc[indices_a_conservar].reset_index(drop=True)
-                    st.session_state.tiempo_estimado = round(tiempo_total_seg / 60)
-                    st.session_state.paso_actual = 0
-                    st.session_state.nivel_seleccionado = nivel_seleccionado
-                    st.session_state.modo_entrenamiento = False
-                    st.rerun()
-
-    st.markdown("---")
-
-    # -------------------------------------------------------------------------
-    # FASE 1: RESUMEN DE TIEMPOS Y ACCIONES HORIZONTALES
-    # -------------------------------------------------------------------------
-    if st.session_state.df_rutina is not None:
-        df_rutina = st.session_state.df_rutina
-        tiempo_ejercicios = st.session_state.tiempo_estimado
-        tiempo_total_sesion = tiempo_ejercicios + TIEMPO_ESTIRAMIENTOS_MIN
-
-        st.success("🔥 **Rutina generada con éxito**")
-
-        # Tiempos desglosados en Horizontal
-        col_t1, col_t2, col_t3 = st.columns(3)
-        col_t1.metric("🏋️ Fuerza / Abs", f"{tiempo_ejercicios} min")
-        col_t2.metric("🧘 Estiramientos", f"{TIEMPO_ESTIRAMIENTOS_MIN} min")
-        col_t3.metric("⏱️ Tiempo Total", f"{tiempo_total_sesion} min")
-
-        st.markdown("<br>", unsafe_allow_html=True)
-
-        # Evento de Calendar
-        nombres_ejercicios = ", ".join(df_rutina["Nombre"].tolist())
-        titulo_evento = f"🏋️‍♂️ Rutina W360 ({tiempo_total_sesion} min) - {st.session_state.usuario_actual}"
-        descripcion_evento = (
-            f"Sesión de entrenamiento personal:\n\n"
-            f"📋 Ejercicios: {nombres_ejercicios}\n\n"
-            f"🔗 Acceso: https://rutinas-app.streamlit.app"
-        )
-        link_calendar = generar_link_google_calendar(
-            titulo=titulo_evento,
-            descripcion=descripcion_evento,
-            duracion_minutos=tiempo_total_sesion,
-        )
-
-        # Botones de Acción Horizontal Rectangulares
-        col_act1, col_act2 = st.columns([1, 1])
-        with col_act1:
-            st.link_button(
-                "📅 Agendar en Google Calendar",
-                link_calendar,
-                use_container_width=True,
-            )
-        with col_act2:
-            if st.button(
-                "🚀 Comenzar Entrenamiento Ahora",
-                type="primary",
-                use_container_width=True,
-            ):
-                st.session_state.modo_entrenamiento = True
-                st.session_state.paso_actual = 0
-                st.rerun()
-
-# -----------------------------------------------------------------------------
-# FASE 2: MODO ENTRENAMIENTO GUIADO (RUTINAS W360)
-# -----------------------------------------------------------------------------
-
-elif st.session_state.df_rutina is not None and st.session_state.modo_entrenamiento:
-    st.markdown("<div class='titulo-w360'>RUTINAS W360</div>", unsafe_allow_html=True)
-
-    df_rutina = st.session_state.df_rutina
-    total_ejercicios = len(df_rutina)
-    total_pasos = total_ejercicios + 1
-    paso_actual = st.session_state.paso_actual
-
-    progreso_porcentaje = min(float(paso_actual / total_pasos), 1.0)
-    st.progress(progreso_porcentaje)
-
-    if paso_actual < total_ejercicios:
-        st.caption(f"Ejercicio **{paso_actual + 1} de {total_ejercicios}**")
-    elif paso_actual == total_ejercicios:
-        st.caption("Bloque Final de Estiramientos")
-    else:
-        st.caption("¡Completado!")
-
-    st.markdown("---")
-
-    if paso_actual < total_ejercicios:
-        row = df_rutina.iloc[paso_actual]
-        nivel_sel = st.session_state.nivel_seleccionado
-
-        # Nombre del ejercicio (SIN nomenclaturas ni IDs al final)
-        st.subheader(f"{row['Nombre']}")
-
-        series_reps, descanso_seg, _ = obtener_prescripcion_y_tiempo(
-            nivel_sel, row.get("Grupo Muscular", "")
-        )
-
-        # Prescripción Visual Atractiva (Arriba Series, Abajo Tiempo)
-        st.markdown(
-            f"""
-            <div class="prescripcion-card">
-                <div class="prescripcion-series">{series_reps}</div>
-                <div class="prescripcion-descanso">⏱️ Descanso: {descanso_seg} segundos</div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-
-        # Información complementaria en 3 columnas
-        c_d1, c_d2, c_d3 = st.columns(3)
-        c_d1.write(f"**Patrón:** {row.get('Patron Movimiento', row.get('Patrón', '-'))}")
-        c_d2.write(f"**Material:** {row.get('Material', '-')}")
-        c_d3.write(f"**Grupo:** {row.get('Grupo Muscular', '-')}")
-
-        columnas_fotos = ["Imagen_1", "Imagen_2", "Imagen_3", "Imagen_4"]
-        urls_validas = [
-            row[col]
-            for col in columnas_fotos
-            if col in row and pd.notna(row[col]) and str(row[col]).strip()
-        ]
-
-        if urls_validas:
-            cols_img = st.columns(len(urls_validas))
-            for index, url in enumerate(urls_validas):
-                with cols_img[index]:
-                    st.image(url, caption=f"Paso {index + 1}", use_container_width=True)
-
-        st.markdown("---")
-
-        # ---------------------------------------------------------------------
-        # TEMPORIZADOR CENTRADO Y SÍNTESIS DE ALARMA WEB AUDIO API
-        # ---------------------------------------------------------------------
-        st.markdown("<div class='temp-container'>", unsafe_allow_html=True)
-        col_temp_left, col_temp_center, col_temp_right = st.columns([1, 2, 1])
-
-        with col_temp_center:
-            if st.button("⏱️ TIEMPO", use_container_width=True):
-                ph = st.empty()
-                for t in range(descanso_seg, -1, -1):
-                    ph.markdown(
-                        f"<h1 style='text-align: center; color: #E11D48; font-size: 3rem;'>{t} s</h1>",
-                        unsafe_allow_html=True,
-                    )
-                    time.sleep(1)
-
-                ph.markdown(
-                    "<h3 style='text-align: center; color: #16A34A;'>🔔 ¡Tiempo finalizado!</h3>",
-                    unsafe_allow_html=True,
-                )
-
-                # Web Audio API: Sonido Beep Nativo en Navegador (Compatible iOS/Android/PC)
-                st.components.v1.html(
-                    """
-                    <script>
-                    function playBeep() {
-                        try {
-                            var ctx = new (window.AudioContext || window.webkitAudioContext)();
-                            var osc = ctx.createOscillator();
-                            var gain = ctx.createGain();
-                            osc.type = 'sine';
-                            osc.frequency.setValueAtTime(880, ctx.currentTime); // Tono de 880Hz (La)
-                            gain.gain.setValueAtTime(1, ctx.currentTime);
-                            osc.connect(gain);
-                            gain.connect(ctx.destination);
-                            osc.start();
-                            osc.stop(ctx.currentTime + 0.8); // Duración de 0.8 segundos
-                        } catch(e) {
-                            console.log("Audio not supported or blocked");
-                        }
-                    }
-                    playBeep();
-                    </script>
-                    """,
-                    height=0,
-                )
-        st.markdown("</div>", unsafe_allow_html=True)
-
-        st.markdown("---")
-
-        # Botones de Navegación de Ejercicios
-        col_nav1, col_nav2 = st.columns([1, 1])
-
-        with col_nav1:
-            if paso_actual > 0:
-                if st.button("⬅️ Anterior", use_container_width=True):
-                    st.session_state.paso_actual -= 1
-                    st.rerun()
-
-        with col_nav2:
-            if st.button(
-                "✅ Siguiente ejercicio ➔", type="primary", use_container_width=True
-            ):
-                st.session_state.paso_actual += 1
-                st.rerun()
-
-    elif paso_actual == total_ejercicios:
-        st.subheader("🧘 Bloque de Enfriamiento y Estiramientos (10 min)")
-        st.markdown(
-            """
-        * 🧘‍♂️ **Isquiotibiales y Cuádriceps:** 2 series de 30 seg por pierna.
-        * 🧘‍♀️ **Pectorales:** 2 series de 30 seg contra pared.
-        * 🧘‍♂️ **Glúteos:** 2 series de 30 seg por lado.
-        * 🧘‍♀️ **Cobra / Lumbar:** 2 series de 30 seg suave.
-        """
-        )
-
-        st.markdown("---")
-        col_nav1, col_nav2 = st.columns([1, 1])
-        with col_nav1:
-            if st.button("⬅️ Anterior", use_container_width=True):
-                st.session_state.paso_actual -= 1
-                st.rerun()
-        with col_nav2:
-            if st.button(
-                "🏁 Finalizar Entrenamiento", type="primary", use_container_width=True
-            ):
-                st.session_state.paso_actual += 1
-                st.rerun()
-
-    else:
-        st.balloons()
-        st.success("🎉 ¡Entrenamiento completado con éxito!")
-        st.markdown("---")
-        if st.button("🔄 Volver al Menú", type="primary", use_container_width=True):
-            st.session_state.paso_actual = 0
-            st.session_state.modo_entrenamiento = False
+# ==========================================
+# 5. APLICACIÓN PRINCIPAL
+# ==========================================
+def main_app():
+    # Sidebar
+    with st.sidebar:
+        st.markdown(f"👤 **Usuario:** {st.session_state.username}")
+        st.markdown(f"⭐ **Membresía:** `{st.session_state.user_tier}`")
+        if st.button("Cerrar Sesión"):
+            st.session_state.authenticated = False
             st.rerun()
+        
+        st.divider()
+        st.header("📂 Carga de Datos")
+        uploaded_excel = st.file_uploader("Subir Excel de Ejercicios (.xlsx)", type=["xlsx", "xls"])
+        
+        st.divider()
+        st.header("🎯 Filtros Clinico-Deportivos")
+        
+        df_exercises = load_exercise_database(uploaded_excel)
+        
+        # Filtros
+        patologias = ["Todas"] + list(df_exercises["Patologia"].dropna().unique())
+        selected_patologia = st.selectbox("Filtrar por Patología / Condición", patologias)
+        
+        max_pain_level = st.slider(
+            "Nivel Máximo de Dolor Tolerable (EVA 0-10)",
+            min_value=0, max_value=10, value=5,
+            help="Filtra ejercicios cuya intensidad no supere la tolerancia del usuario."
+        )
+        
+        grupos_musculares = ["Todos"] + list(df_exercises["Grupo_Muscular"].dropna().unique())
+        selected_grupo = st.selectbox("Grupo Muscular / Zona Target", grupos_musculares)
+
+    # Filtrar DataFrame
+    filtered_df = df_exercises.copy()
+    if selected_patologia != "Todas":
+        filtered_df = filtered_df[filtered_df["Patologia"] == selected_patologia]
+    
+    filtered_df = filtered_df[filtered_df["Dolor_Max_Recomendado"] <= max_pain_level]
+    
+    if selected_grupo != "Todos":
+        filtered_df = filtered_df[filtered_df["Grupo_Muscular"] == selected_grupo]
+
+    # Main Interface
+    st.markdown('<div class="main-header">🏋️‍♂️ Prescripción de Ejercicio & Rehabilitación</div>', unsafe_allow_html=True)
+    st.markdown('<div class="sub-header">Selecciona ejercicios, personaliza la sesión y ejecuta con cronómetro integrado.</div>', unsafe_allow_html=True)
+
+    tab1, tab2, tab3 = st.tabs(["📋 Generador de Rutina", "⏱️ Modo Entrenamiento / Cronómetro", "📅 Agendar en Calendar"])
+
+    # ---------------------------------------------------------
+    # TAB 1: GENERADOR DE RUTINA
+    # ---------------------------------------------------------
+    with tab1:
+        st.subheader("Ejercicios Disponibles según Parámetros")
+        st.caption(f"Se encontraron **{len(filtered_df)}** ejercicios compatibles.")
+
+        if filtered_df.empty:
+            st.warning("No hay ejercicios que coincidan con el nivel de dolor o criterios seleccionados.")
+        else:
+            selected_indices = []
+            for idx, row in filtered_df.iterrows():
+                with st.container():
+                    col_img, col_info, col_select = st.columns([1.5, 3, 1])
+                    
+                    with col_img:
+                        if pd.notna(row.get("Imagen_URL")):
+                            st.image(row["Imagen_URL"], use_container_width=True)
+                        else:
+                            st.info("Sin Imagen")
+
+                    with col_info:
+                        st.markdown(f"### {row['Nombre']}")
+                        st.markdown(f"**Categoría:** {row['Categoria']} | **Zona:** {row['Grupo_Muscular']}")
+                        st.markdown(f"<span class='badge-pathology'>Patología: {row['Patologia']}</span> "
+                                    f"<span class='badge-pain'>Límite Dolor: {row['Dolor_Max_Recomendado']}/10</span>", unsafe_allow_html=True)
+                        st.write(f"📝 **Instrucciones:** {row['Instrucciones']}")
+                        st.write(f"📊 **Dosis recomendada:** {row['Series']} series x {row['Repeticiones']}")
+
+                    with col_select:
+                        st.write("")
+                        st.write("")
+                        if st.checkbox("Añadir a Sesión", key=f"chk_{row['ID']}"):
+                            selected_indices.append(idx)
+                    
+                    st.divider()
+
+            # Guardar rutina seleccionada
+            if selected_indices:
+                st.session_state.current_routine = filtered_df.loc[selected_indices]
+                st.success(f"¡{len(selected_indices)} ejercicios añadidos a la rutina activa!")
+
+    # ---------------------------------------------------------
+    # TAB 2: CRONÓMETRO Y MODO ENTRENAMIENTO
+    # ---------------------------------------------------------
+    with tab2:
+        st.subheader("⏱️ Ejecución & Tiempos de Descanso")
+        
+        if "current_routine" in st.session_state and not st.session_state.current_routine.empty:
+            routine = st.session_state.current_routine
+            st.info(f"Rutina activa cargada con {len(routine)} ejercicios.")
+            
+            selected_ex_name = st.selectbox("Selecciona ejercicio para ejecutar:", routine["Nombre"].tolist())
+            ex_data = routine[routine["Nombre"] == selected_ex_name].iloc[0]
+            
+            col_a, col_b = st.columns([2, 1])
+            with col_a:
+                st.markdown(f"### {ex_data['Nombre']}")
+                st.write(f"🎯 **Series y Reps:** {ex_data['Series']} series | {ex_data['Repeticiones']}")
+                st.write(f"💡 **Técnica:** {ex_data['Instrucciones']}")
+            
+            with col_b:
+                st.markdown("#### Cronómetro de Descanso")
+                default_rest = int(ex_data.get("Descanso_Seg", 45))
+                rest_time = st.number_input("Segundos de descanso:", min_value=5, max_value=300, value=default_rest, step=5)
+                
+                if st.button("▶️ Iniciar Descanso", use_container_width=True):
+                    timer_placeholder = st.empty()
+                    for seconds in range(rest_time, 0, -1):
+                        timer_placeholder.metric(label="Tiempo Restante", value=f"{seconds}s")
+                        time.sleep(1)
+                    
+                    timer_placeholder.markdown("<h2 style='color: green; text-align: center;'>¡TIEMPO! 🔔</h2>", unsafe_allow_html=True)
+                    play_sound_alarm()
+                    st.balloons()
+        else:
+            st.info("Ve a la pestaña 'Generador de Rutina' y selecciona ejercicios para activar el temporizador.")
+
+    # ---------------------------------------------------------
+    # TAB 3: AGENDAR EN GOOGLE CALENDAR
+    # ---------------------------------------------------------
+    with tab3:
+        st.subheader("📅 Planificar y Agendar Sesión")
+        
+        if "current_routine" in st.session_state and not st.session_state.current_routine.empty:
+            routine = st.session_state.current_routine
+            
+            col1, col2 = st.columns(2)
+            with col1:
+                date_input = st.date_input("Fecha de la sesión", datetime.date.today())
+                time_input = st.time_input("Hora de inicio", datetime.time(10, 0))
+                duration_input = st.number_input("Duración total estimada (min)", value=45, step=5)
+            
+            with col2:
+                session_title = f"Sesión de Ejercicios - {st.session_state.username}"
+                
+                # Detalle de la rutina
+                exercise_list_str = "\n".join([f"- {row['Nombre']} ({row['Series']}x{row['Repeticiones']})" for _, row in routine.iterrows()])
+                session_desc = f"Rutina Personalizada:\n\n{exercise_list_str}\n\nPrescrito en plataforma Rehab & Fitness."
+                
+                start_datetime = datetime.datetime.combine(date_input, time_input)
+                
+                gcal_url = generate_google_calendar_url(
+                    title=session_title,
+                    description=session_desc,
+                    start_dt=start_datetime,
+                    duration_minutes=duration_input
+                )
+                
+                st.write("")
+                st.write("")
+                st.markdown(f'''
+                    <a href="{gcal_url}" target="_blank" style="text-decoration: none;">
+                        <button style="
+                            background-color: #4285F4;
+                            color: white;
+                            padding: 12px 20px;
+                            border: none;
+                            border-radius: 8px;
+                            font-size: 16px;
+                            font-weight: bold;
+                            cursor: pointer;
+                            width: 100%;">
+                            📅 Agendar en Google Calendar
+                        </button>
+                    </a>
+                ''', unsafe_allow_html=True)
+        else:
+            st.info("Primero selecciona ejercicios en la pestaña 'Generador de Rutina' para agendar la sesión.")
+
+# ==========================================
+# 6. EJECUCIÓN DEL FLUJO
+# ==========================================
+if not st.session_state.authenticated:
+    login_screen()
+else:
+    main_app()
