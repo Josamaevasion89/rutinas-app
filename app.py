@@ -106,7 +106,7 @@ st.markdown(
         margin-top: 4px;
     }
 
-    /* Botón de Tiempo: Pequeño, Centrado, Fondo VERDE y Letra BLANCA */
+    /* Botón de Tiempo Descanso: Pequeño, Centrado, Fondo VERDE y Letra BLANCA */
     div.stButton > button[key="btn_tiempo"] {
         background-color: #16a34a !important;
         color: #ffffff !important;
