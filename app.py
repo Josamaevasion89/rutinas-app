@@ -14,7 +14,7 @@ st.set_page_config(
 )
 
 # -----------------------------------------------------------------------------
-# CSS PERSONALIZADO (W360 MOBILE-FIRST: TITULO, BOTONES, TIMER Y METRICAS)
+# CSS PERSONALIZADO (OPTIMIZADO PARA MÓVIL Y CENTRADO)
 # -----------------------------------------------------------------------------
 st.markdown(
     """
@@ -35,6 +35,16 @@ st.markdown(
         margin-bottom: 15px;
     }
 
+    /* Nombre del Ejercicio Centrado */
+    .exercise-title {
+        text-align: center;
+        font-size: 1.5rem;
+        font-weight: 800;
+        color: #0f172a;
+        margin-top: 10px;
+        margin-bottom: 15px;
+    }
+
     /* Botón Generar Rutina compacto */
     div.stButton > button[key="btn_generar"] {
         width: 100% !important;
@@ -44,67 +54,52 @@ st.markdown(
         font-weight: 700 !important;
     }
 
-    /* Disposición de botones de calendario en la misma fila horizontal */
-    .calendar-container {
-        display: flex;
-        flex-direction: row;
-        justify-content: space-between;
-        gap: 10px;
-        width: 100%;
-        margin-bottom: 15px;
-    }
-
-    /* Métrica de Tiempo Total destacada abajo en el centro */
-    .total-time-card {
+    /* Tarjeta Destacada Estilo Estilo "Tiempo Total" para Prescripción y Descanso */
+    .highlight-card {
         text-align: center;
         background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
         border-radius: 12px;
-        padding: 12px;
-        margin-top: 10px;
+        padding: 14px;
+        margin: 15px 0;
         border: 1px solid #334155;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.15);
     }
-    .total-time-title {
+    .highlight-card-subtitle {
         font-size: 0.85rem;
         color: #94a3b8;
         text-transform: uppercase;
         letter-spacing: 1px;
         font-weight: 600;
     }
-    .total-time-value {
-        font-size: 2.2rem;
+    .highlight-card-value {
+        font-size: 1.8rem;
         font-weight: 800;
         color: #38bdf8;
+        margin-top: 2px;
+    }
+    .highlight-card-desc {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: #f1f5f9;
+        margin-top: 4px;
     }
 
-    /* Tarjeta de Prescripción */
-    .prescripcion-card {
-        background: #f8fafc;
-        border-radius: 12px;
-        padding: 1rem;
-        text-align: center;
-        margin: 1rem 0;
-        border: 1px solid #e2e8f0;
+    /* Botón de Tiempo: Pequeño, Centrado y Fondo Verde */
+    .timer-btn-container {
+        display: flex;
+        justify-content: center;
+        width: 100%;
+        margin: 15px 0;
     }
-    .prescripcion-series {
-        font-size: 1.3rem;
-        font-weight: 800;
-        color: #0f172a;
-    }
-    .prescripcion-descanso {
-        font-size: 0.95rem;
-        color: #64748b;
-        margin-top: 0.2rem;
-    }
-
-    /* Botón de Tiempo con fondo verde */
     div.stButton > button[key="btn_tiempo"] {
         background-color: #16a34a !important;
         color: white !important;
-        font-weight: bold !important;
-        width: 100% !important;
-        border-radius: 10px !important;
+        font-weight: 800 !important;
+        font-size: 1rem !important;
+        padding: 8px 24px !important;
+        border-radius: 20px !important;
         border: none !important;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
     }
 
     /* Pantalla del Temporizador (Verde y Rojo) */
@@ -121,6 +116,14 @@ st.markdown(
         color: #dc2626;
         text-align: center;
         margin: 10px 0;
+    }
+
+    /* Centrado de detalles del ejercicio */
+    .exercise-details {
+        text-align: center;
+        font-size: 0.95rem;
+        color: #475569;
+        margin-bottom: 15px;
     }
 
     /* Botones generales rectangulares redondeados */
@@ -289,7 +292,8 @@ if "modo_entrenamiento" not in st.session_state:
 # -----------------------------------------------------------------------------
 
 st.markdown(
-    '<div class="header-title">🏋️‍♂️ RUTINAS W360 🏋️‍♂️</div>', unsafe_allow_html=True
+    '<div class="header-title" id="inicio-app">🏋️‍♂️ RUTINAS W360 🏋️‍♂️</div>',
+    unsafe_allow_html=True,
 )
 
 if not st.session_state.modo_entrenamiento:
@@ -369,14 +373,17 @@ if not st.session_state.modo_entrenamiento:
     st.markdown("---")
 
     # -------------------------------------------------------------------------
-    # RESUMEN DE TIEMPOS Y BOTONES DE CALENDARIO PARALELOS
+    # RESUMEN DE TIEMPOS CENTRADO Y BOTONES
     # -------------------------------------------------------------------------
     if st.session_state.df_rutina is not None:
         df_rutina = st.session_state.df_rutina
         tiempo_ejercicios = st.session_state.tiempo_estimado
         tiempo_total_sesion = tiempo_ejercicios + TIEMPO_ESTIRAMIENTOS_MIN
 
-        st.success("🔥 **Rutina generada con éxito**")
+        st.markdown(
+            "<h4 style='text-align: center; color: #16a34a;'>🔥 Rutina generada con éxito</h4>",
+            unsafe_allow_html=True,
+        )
 
         # Métricas (2 arriba, 1 destacado abajo)
         c_m1, c_m2 = st.columns(2)
@@ -385,9 +392,9 @@ if not st.session_state.modo_entrenamiento:
 
         st.markdown(
             f"""
-            <div class="total-time-card">
-                <div class="total-time-title">Tiempo Total</div>
-                <div class="total-time-value">{tiempo_total_sesion} min</div>
+            <div class="highlight-card">
+                <div class="highlight-card-subtitle">Tiempo Total Sesión</div>
+                <div class="highlight-card-value">{tiempo_total_sesion} min</div>
             </div>
             """,
             unsafe_allow_html=True,
@@ -428,10 +435,20 @@ if not st.session_state.modo_entrenamiento:
                 st.rerun()
 
 # -----------------------------------------------------------------------------
-# 5. MODO ENTRENAMIENTO GUIADO
+# 5. MODO ENTRENAMIENTO GUIADO (CON AUTO-SCROLL AL INICIO)
 # -----------------------------------------------------------------------------
 
 elif st.session_state.df_rutina is not None and st.session_state.modo_entrenamiento:
+    # AUTO-SCROLL JS: Fuerza a la pantalla del móvil a subir arriba al cambiar de paso
+    st.components.v1.html(
+        """
+        <script>
+            window.parent.scrollTo({top: 0, behavior: 'smooth'});
+        </script>
+        """,
+        height=0,
+    )
+
     df_rutina = st.session_state.df_rutina
     total_ejercicios = len(df_rutina)
     total_pasos = total_ejercicios + 1
@@ -441,11 +458,15 @@ elif st.session_state.df_rutina is not None and st.session_state.modo_entrenamie
     st.progress(progreso_porcentaje)
 
     if paso_actual < total_ejercicios:
-        st.caption(f"Ejercicio **{paso_actual + 1} de {total_ejercicios}**")
+        st.markdown(
+            f"<div style='text-align: center; color: #64748b; font-size: 0.85rem;'>Ejercicio <b>{paso_actual + 1} de {total_ejercicios}</b></div>",
+            unsafe_allow_html=True,
+        )
     elif paso_actual == total_ejercicios:
-        st.caption("Bloque Final de Estiramientos")
-    else:
-        st.caption("¡Completado!")
+        st.markdown(
+            "<div style='text-align: center; color: #64748b; font-size: 0.85rem;'>Bloque Final de Estiramientos</div>",
+            unsafe_allow_html=True,
+        )
 
     st.markdown("---")
 
@@ -453,30 +474,27 @@ elif st.session_state.df_rutina is not None and st.session_state.modo_entrenamie
         row = df_rutina.iloc[paso_actual]
         nivel_sel = st.session_state.nivel_seleccionado
 
-        # Nombre del ejercicio limpio (sin IDs)
-        st.subheader(f"{row['Nombre']}")
+        # Nombre del ejercicio CENTRADO
+        st.markdown(
+            f'<div class="exercise-title">{row["Nombre"]}</div>',
+            unsafe_allow_html=True,
+        )
 
         series_reps, descanso_seg, _ = obtener_prescripcion_y_tiempo(
             nivel_sel, row.get("Grupo Muscular", "")
         )
 
-        # Tarjeta de prescripción visual
+        # Detalles del ejercicio CENTRADOS
+        patron = row.get('Patron Movimiento', row.get('Patrón', '-'))
+        material = row.get('Material', '-')
+        grupo_m = row.get('Grupo Muscular', '-')
+        
         st.markdown(
-            f"""
-            <div class="prescripcion-card">
-                <div class="prescripcion-series">{series_reps}</div>
-                <div class="prescripcion-descanso">⏱️ Descanso: {descanso_seg} segundos</div>
-            </div>
-            """,
+            f'<div class="exercise-details"><b>Patrón:</b> {patron} &nbsp;|&nbsp; <b>Material:</b> {material} &nbsp;|&nbsp; <b>Grupo:</b> {grupo_m}</div>',
             unsafe_allow_html=True,
         )
 
-        # Detalles del ejercicio en 3 columnas
-        c_d1, c_d2, c_d3 = st.columns(3)
-        c_d1.write(f"**Patrón:** {row.get('Patron Movimiento', row.get('Patrón', '-'))}")
-        c_d2.write(f"**Material:** {row.get('Material', '-')}")
-        c_d3.write(f"**Grupo:** {row.get('Grupo Muscular', '-')}")
-
+        # IMÁGENES DEL EJERCICIO
         columnas_fotos = ["Imagen_1", "Imagen_2", "Imagen_3", "Imagen_4"]
         urls_validas = [
             row[col]
@@ -490,12 +508,24 @@ elif st.session_state.df_rutina is not None and st.session_state.modo_entrenamie
                 with cols_img[index]:
                     st.image(url, caption=f"Paso {index + 1}", use_container_width=True)
 
-        st.markdown("---")
+        # TARJETA DESTACADA "TIEMPO DE DESCANSO" (Estilo "Tiempo Total")
+        st.markdown(
+            f"""
+            <div class="highlight-card">
+                <div class="highlight-card-subtitle">Prescripción & Descanso</div>
+                <div class="highlight-card-desc">{series_reps}</div>
+                <div class="highlight-card-value">⏱️ {descanso_seg} seg descanso</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
 
-        # ---------------------------------------------------------------------
-        # TEMPORIZADOR CENTRADO (BOTÓN VERDE + TIMER EN COLOR + SONIDO MÓVIL)
-        # ---------------------------------------------------------------------
-        if st.button("⏱️ TIEMPO", key="btn_tiempo"):
+        # BOTÓN DE TIEMPO CENTRADO PEQUEÑO CON FONDO VERDE
+        col_btn_center = st.columns([1, 2, 1])
+        with col_btn_center[1]:
+            timer_pressed = st.button("⏱️ TIEMPO", key="btn_tiempo", use_container_width=True)
+
+        if timer_pressed:
             ph = st.empty()
 
             for t in range(descanso_seg, -1, -1):
@@ -511,7 +541,7 @@ elif st.session_state.df_rutina is not None and st.session_state.modo_entrenamie
                 unsafe_allow_html=True,
             )
 
-            # Web Audio API sintetizada (Garantiza sonido en iOS Safari y Android)
+            # Sonido Web Audio API en móviles
             st.components.v1.html(
                 """
                 <script>
@@ -528,7 +558,7 @@ elif st.session_state.df_rutina is not None and st.session_state.modo_entrenamie
                         osc.start();
                         osc.stop(ctx.currentTime + 0.8);
                     } catch(e) {
-                        console.log("Audio not allowed or supported");
+                        console.log("Audio not allowed");
                     }
                 }
                 playBeep();
@@ -539,7 +569,7 @@ elif st.session_state.df_rutina is not None and st.session_state.modo_entrenamie
 
         st.markdown("---")
 
-        # Navegación entre ejercicios (Orden estricto solicitando el visto verde y la flecha)
+        # Navegación entre ejercicios
         col_nav1, col_nav2 = st.columns([1, 1])
 
         with col_nav1:
@@ -558,14 +588,20 @@ elif st.session_state.df_rutina is not None and st.session_state.modo_entrenamie
                 st.rerun()
 
     elif paso_actual == total_ejercicios:
-        st.subheader("🧘 Bloque de Enfriamiento y Estiramientos (10 min)")
+        st.markdown(
+            '<div class="exercise-title">🧘 Bloque de Enfriamiento y Estiramientos</div>',
+            unsafe_allow_html=True,
+        )
         st.markdown(
             """
-        * 🧘‍♂️ **Isquiotibiales y Cuádriceps:** 2 series de 30 seg por pierna.
-        * 🧘‍♀️ **Pectorales:** 2 series de 30 seg contra pared.
-        * 🧘‍♂️ **Glúteos:** 2 series de 30 seg por lado.
-        * 🧘‍♀️ **Cobra / Lumbar:** 2 series de 30 seg suave.
-        """
+        <div style="text-align: center;">
+            <p>🧘‍♂️ <b>Isquiotibiales y Cuádriceps:</b> 2 series de 30 seg por pierna.</p>
+            <p>🧘‍♀️ <b>Pectorales:</b> 2 series de 30 seg contra pared.</p>
+            <p>🧘‍♂️ <b>Glúteos:</b> 2 series de 30 seg por lado.</p>
+            <p>🧘‍♀️ <b>Cobra / Lumbar:</b> 2 series de 30 seg suave.</p>
+        </div>
+        """,
+            unsafe_allow_html=True,
         )
 
         st.markdown("---")
@@ -583,7 +619,10 @@ elif st.session_state.df_rutina is not None and st.session_state.modo_entrenamie
 
     else:
         st.balloons()
-        st.success("🎉 ¡Entrenamiento completado con éxito!")
+        st.markdown(
+            "<h3 style='text-align: center; color: #16a34a;'>🎉 ¡Entrenamiento completado con éxito!</h3>",
+            unsafe_allow_html=True,
+        )
         st.markdown("---")
         if st.button("🔄 Volver al Menú", type="primary", use_container_width=True):
             st.session_state.paso_actual = 0
