@@ -14,7 +14,7 @@ st.set_page_config(
 )
 
 # -----------------------------------------------------------------------------
-# CSS PERSONALIZADO (OPTIMIZADO PARA MÓVIL Y CENTRADO)
+# CSS PERSONALIZADO (CENTRADOS, TEMPORIZADOR Y BOTÓN VERDE)
 # -----------------------------------------------------------------------------
 st.markdown(
     """
@@ -25,7 +25,7 @@ st.markdown(
     footer {visibility: hidden;}
     .stAppDeployButton {display:none;}
 
-    /* Título centrado con emojis */
+    /* Título centrado */
     .header-title {
         text-align: center;
         font-size: 1.8rem;
@@ -54,13 +54,35 @@ st.markdown(
         font-weight: 700 !important;
     }
 
-    /* Tarjeta Destacada Estilo Estilo "Tiempo Total" para Prescripción y Descanso */
+    /* Tarjetas de Métricas Secundarias Centradas (Fuerza / Estiramientos) */
+    .sub-metric-card {
+        text-align: center;
+        background-color: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 10px;
+        margin-bottom: 10px;
+    }
+    .sub-metric-title {
+        font-size: 0.85rem;
+        color: #64748b;
+        font-weight: 700;
+        text-transform: uppercase;
+    }
+    .sub-metric-value {
+        font-size: 1.4rem;
+        font-weight: 800;
+        color: #0f172a;
+        margin-top: 2px;
+    }
+
+    /* Tarjeta Destacada Estilo "Tiempo Total" */
     .highlight-card {
         text-align: center;
         background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
         border-radius: 12px;
         padding: 14px;
-        margin: 15px 0;
+        margin: 10px 0;
         border: 1px solid #334155;
         box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.15);
     }
@@ -78,44 +100,40 @@ st.markdown(
         margin-top: 2px;
     }
     .highlight-card-desc {
-        font-size: 1.1rem;
+        font-size: 1.15rem;
         font-weight: 700;
         color: #f1f5f9;
         margin-top: 4px;
     }
 
-    /* Botón de Tiempo: Pequeño, Centrado y Fondo Verde */
-    .timer-btn-container {
-        display: flex;
-        justify-content: center;
-        width: 100%;
-        margin: 15px 0;
-    }
+    /* Botón de Tiempo: Pequeño, Centrado, Fondo VERDE y Letra BLANCA */
     div.stButton > button[key="btn_tiempo"] {
         background-color: #16a34a !important;
-        color: white !important;
+        color: #ffffff !important;
         font-weight: 800 !important;
-        font-size: 1rem !important;
-        padding: 8px 24px !important;
+        font-size: 0.95rem !important;
+        padding: 6px 20px !important;
         border-radius: 20px !important;
         border: none !important;
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        display: block;
+        margin: 0 auto;
     }
 
-    /* Pantalla del Temporizador (Verde y Rojo) */
-    .timer-green {
+    /* Temporizador Visible desde el inicio */
+    .timer-display {
         font-size: 3.5rem;
         font-weight: 800;
         color: #16a34a;
         text-align: center;
-        margin: 10px 0;
+        margin: 5px 0;
     }
     .timer-red {
         font-size: 3.5rem;
         font-weight: 800;
         color: #dc2626;
         text-align: center;
-        margin: 10px 0;
+        margin: 5px 0;
     }
 
     /* Centrado de detalles del ejercicio */
@@ -373,7 +391,7 @@ if not st.session_state.modo_entrenamiento:
     st.markdown("---")
 
     # -------------------------------------------------------------------------
-    # RESUMEN DE TIEMPOS CENTRADO Y BOTONES
+    # RESUMEN DE TIEMPOS COMPLETAMENTE CENTRADO
     # -------------------------------------------------------------------------
     if st.session_state.df_rutina is not None:
         df_rutina = st.session_state.df_rutina
@@ -385,11 +403,30 @@ if not st.session_state.modo_entrenamiento:
             unsafe_allow_html=True,
         )
 
-        # Métricas (2 arriba, 1 destacado abajo)
+        # Métricas de Fuerza y Estiramientos CENTRADAS
         c_m1, c_m2 = st.columns(2)
-        c_m1.metric("🏋️ Fuerza", f"{tiempo_ejercicios} min")
-        c_m2.metric("🧘 Abs / Estiramientos", f"{TIEMPO_ESTIRAMIENTOS_MIN} min")
+        with c_m1:
+            st.markdown(
+                f"""
+                <div class="sub-metric-card">
+                    <div class="sub-metric-title">🏋️ Fuerza</div>
+                    <div class="sub-metric-value">{tiempo_ejercicios} min</div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+        with c_m2:
+            st.markdown(
+                f"""
+                <div class="sub-metric-card">
+                    <div class="sub-metric-title">🧘 Estiramientos</div>
+                    <div class="sub-metric-value">{TIEMPO_ESTIRAMIENTOS_MIN} min</div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
 
+        # Tiempo Total Centrado
         st.markdown(
             f"""
             <div class="highlight-card">
@@ -416,7 +453,7 @@ if not st.session_state.modo_entrenamiento:
             duracion_minutos=tiempo_total_sesion,
         )
 
-        # Botones de Acción Horizontales Paralelos
+        # Botones de Acción Horizontales
         col_act1, col_act2 = st.columns([1, 1])
         with col_act1:
             st.link_button(
@@ -435,11 +472,11 @@ if not st.session_state.modo_entrenamiento:
                 st.rerun()
 
 # -----------------------------------------------------------------------------
-# 5. MODO ENTRENAMIENTO GUIADO (CON AUTO-SCROLL AL INICIO)
+# 5. MODO ENTRENAMIENTO GUIADO (CON TEMPORIZADOR INICIAL Y AUTO-SCROLL)
 # -----------------------------------------------------------------------------
 
 elif st.session_state.df_rutina is not None and st.session_state.modo_entrenamiento:
-    # AUTO-SCROLL JS: Fuerza a la pantalla del móvil a subir arriba al cambiar de paso
+    # Auto Scroll al inicio del ejercicio
     st.components.v1.html(
         """
         <script>
@@ -508,40 +545,44 @@ elif st.session_state.df_rutina is not None and st.session_state.modo_entrenamie
                 with cols_img[index]:
                     st.image(url, caption=f"Paso {index + 1}", use_container_width=True)
 
-        # TARJETA DESTACADA "TIEMPO DE DESCANSO" (Estilo "Tiempo Total")
+        # TARJETA DESTACADA "PRESCRIPCIÓN"
         st.markdown(
             f"""
             <div class="highlight-card">
-                <div class="highlight-card-subtitle">Prescripción & Descanso</div>
+                <div class="highlight-card-subtitle">Prescripción de Trabajo</div>
                 <div class="highlight-card-desc">{series_reps}</div>
-                <div class="highlight-card-value">⏱️ {descanso_seg} seg descanso</div>
             </div>
             """,
             unsafe_allow_html=True,
         )
 
-        # BOTÓN DE TIEMPO CENTRADO PEQUEÑO CON FONDO VERDE
+        # TEMPORIZADOR VISIBLE DESDE EL PRINCIPIO
+        ph_timer = st.empty()
+        ph_timer.markdown(
+            f'<div class="timer-display">⏱️ {descanso_seg}s</div>',
+            unsafe_allow_html=True,
+        )
+
+        # BOTÓN DE TIEMPO PEQUEÑO Y VERDE CON LETRAS BLANCAS
         col_btn_center = st.columns([1, 2, 1])
         with col_btn_center[1]:
             timer_pressed = st.button("⏱️ TIEMPO", key="btn_tiempo", use_container_width=True)
 
         if timer_pressed:
-            ph = st.empty()
-
             for t in range(descanso_seg, -1, -1):
-                color_class = "timer-red" if t <= 10 else "timer-green"
-                ph.markdown(
+                color_class = "timer-red" if t <= 10 else "timer-display"
+                ph_timer.markdown(
                     f'<div class="{color_class}">{t}s</div>',
                     unsafe_allow_html=True,
                 )
                 time.sleep(1)
 
-            ph.markdown(
+            ph_timer.markdown(
                 "<h3 style='text-align: center; color: #16a34a;'>🔔 ¡Tiempo finalizado!</h3>",
                 unsafe_allow_html=True,
             )
 
-            # Sonido Web Audio API en móviles
+            # Pitido final de aviso
             st.components.v1.html(
                 """
                 <script>
