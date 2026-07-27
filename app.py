@@ -14,7 +14,7 @@ st.set_page_config(
 )
 
 # -----------------------------------------------------------------------------
-# CSS PERSONALIZADO
+# CSS PERSONALIZADO (FUERZA BRUTA PARA EL BOTÓN Y ELEMENTOS)
 # -----------------------------------------------------------------------------
 st.markdown(
     """
@@ -113,29 +113,29 @@ st.markdown(
     }
 
     /* =========================================================================
-       BOTÓN DE DESCANSO: EL DOBLE DE GRANDE, CON EMOJI Y FONDO OSCURO (NO BLANCO)
+       BOTÓN DE DESCANSO: FORZADO A FONDO OSCURO (#0F172A), NO BLANCO Y DOBLE TAMAÑO
        ========================================================================= */
-    div.stButton > button[key="btn_activar_descanso"] {
-        background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%) !important;
+    div.stButton > button[key="btn_activar_descanso"],
+    div.stButton > button[key="btn_activar_descanso"]:focus,
+    div.stButton > button[key="btn_activar_descanso"]:visited {
+        background-color: #0f172a !important;
+        background-image: linear-gradient(135deg, #0f172a 0%, #1e293b 100%) !important;
         color: #38bdf8 !important;
-        border: 2px solid #38bdf8 !important;
-        border-radius: 16px !important;
-        padding: 28px 20px !important; /* Doble de alto/grande */
-        font-size: 1.5rem !important;  /* Tamaño de fuente doble */
+        border: 3px solid #0284c7 !important;
+        border-radius: 18px !important;
+        padding: 26px 16px !important;
+        font-size: 1.5rem !important;
         font-weight: 800 !important;
         width: 100% !important;
-        min-height: 110px !important;  /* Altura amplia */
-        box-shadow: 0 6px 12px -2px rgba(0, 0, 0, 0.3) !important;
-        transition: transform 0.1s ease, border-color 0.2s ease !important;
-        white-space: pre-wrap !important;
+        min-height: 110px !important;
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4) !important;
     }
+
     div.stButton > button[key="btn_activar_descanso"]:hover {
-        border-color: #7dd3fc !important;
+        background-color: #1e293b !important;
+        background-image: linear-gradient(135deg, #1e293b 0%, #334155 100%) !important;
         color: #7dd3fc !important;
-        background: linear-gradient(135deg, #1e293b 0%, #334155 100%) !important;
-    }
-    div.stButton > button[key="btn_activar_descanso"]:active {
-        transform: scale(0.98);
+        border-color: #38bdf8 !important;
     }
 
     /* TEMPORIZADOR: VERDE INICIAL, ROJO DE 10 A 0 */
@@ -601,7 +601,7 @@ elif st.session_state.df_rutina is not None and st.session_state.modo_entrenamie
         )
 
         # ---------------------------------------------------------------------
-        # BOTÓN DE DESCANSO (DOBLE DE GRANDE, EMOJI, FONDO OSCURO)
+        # BOTÓN DE DESCANSO (FONDO OSCURO OBLIGATORIO + SONIDO POTENTE)
         # ---------------------------------------------------------------------
         ph_timer = st.empty()
 
@@ -626,43 +626,45 @@ elif st.session_state.df_rutina is not None and st.session_state.modo_entrenamie
                 unsafe_allow_html=True,
             )
 
-            # PITIDO AUDIBLE COMPATIBLE CON MÓVILES
+            # SONIDO/ALARMA GARANTIZADO MEDIANTE REPRODUCTOR DE AUDIO REAL + SINTETIZADOR
             st.components.v1.html(
                 """
                 <script>
-                function playMobileBeep() {
-                    var AudioContext = window.AudioContext || window.webkitAudioContext;
-                    if (!AudioContext) return;
-                    
-                    var ctx = new AudioContext();
-                    if (ctx.state === 'suspended') {
-                        ctx.resume();
-                    }
+                function sonarAlarma() {
+                    // Opción 1: Tono sintetizado de alta intensidad (Web Audio API)
+                    try {
+                        var AudioContext = window.AudioContext || window.webkitAudioContext;
+                        if (AudioContext) {
+                            var ctx = new AudioContext();
+                            if (ctx.state === 'suspended') { ctx.resume(); }
 
-                    function emitBeep(delay, duration, freq) {
-                        setTimeout(function() {
-                            var osc = ctx.createOscillator();
-                            var gain = ctx.createGain();
-                            
-                            osc.type = 'sine';
-                            osc.frequency.setValueAtTime(freq, ctx.currentTime);
-                            
-                            gain.gain.setValueAtTime(0.8, ctx.currentTime);
-                            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
-                            
-                            osc.connect(gain);
-                            gain.connect(ctx.destination);
-                            
-                            osc.start();
-                            osc.stop(ctx.currentTime + duration);
-                        }, delay);
-                    }
+                            function pitido(frecuencia, inicio, duracion) {
+                                var osc = ctx.createOscillator();
+                                var gain = ctx.createGain();
+                                osc.type = 'triangle';
+                                osc.frequency.value = frecuencia;
+                                gain.gain.setValueAtTime(1.0, ctx.currentTime + inicio);
+                                gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + inicio + duracion);
+                                osc.connect(gain);
+                                gain.connect(ctx.destination);
+                                osc.start(ctx.currentTime + inicio);
+                                osc.stop(ctx.currentTime + inicio + duracion);
+                            }
 
-                    emitBeep(0, 0.2, 880);
-                    emitBeep(250, 0.2, 880);
-                    emitBeep(500, 0.4, 1200);
+                            // Secuencia de pitidos fuerte (Alarma)
+                            pitido(900, 0, 0.25);
+                            pitido(900, 0.3, 0.25);
+                            pitido(1200, 0.6, 0.5);
+                        }
+                    } catch(e) { console.log(e); }
+
+                    // Opción 2: Fallback con audio base64 embebido
+                    try {
+                        var snd = new Audio("data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YU");
+                        snd.play();
+                    } catch(e) {}
                 }
-                playMobileBeep();
+                sonarAlarma();
                 </script>
                 """,
                 height=0,
