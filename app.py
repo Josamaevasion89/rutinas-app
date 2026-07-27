@@ -1,4 +1,3 @@
-import time
 import urllib.parse
 from datetime import datetime, timedelta
 import unicodedata
@@ -14,7 +13,7 @@ st.set_page_config(
 )
 
 # -----------------------------------------------------------------------------
-# CSS PERSONALIZADO (PANEL DE DESCANSO TÁCTIL SIN ASPECTO DE BOTÓN)
+# CSS PERSONALIZADO
 # -----------------------------------------------------------------------------
 st.markdown(
     """
@@ -110,39 +109,6 @@ st.markdown(
         font-size: 0.92rem;
         color: #334155;
         line-height: 1.5;
-    }
-
-    /* =========================================================================
-       PANEL DE TEMPORIZADOR SÓLO RELOJ Y NÚMEROS (SIN BOTÓN)
-       ========================================================================= */
-    div.stButton > button[key="timer_trigger_area"] {
-        background: #0f172a !important;
-        border: 2px solid #0284c7 !important;
-        border-radius: 16px !important;
-        padding: 18px 10px !important;
-        width: 100% !important;
-        cursor: pointer !important;
-        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2) !important;
-    }
-    div.stButton > button[key="timer_trigger_area"]:hover {
-        border-color: #38bdf8 !important;
-        background: #1e293b !important;
-    }
-
-    /* ESTILOS DE LOS NÚMEROS Y EMOJI */
-    .timer-green {
-        font-size: 3.6rem;
-        font-weight: 800;
-        color: #22c55e;
-        text-align: center;
-        line-height: 1;
-    }
-    .timer-red {
-        font-size: 3.6rem;
-        font-weight: 800;
-        color: #ef4444;
-        text-align: center;
-        line-height: 1;
     }
 
     /* Detalle del Ejercicio */
@@ -590,79 +556,6 @@ elif st.session_state.df_rutina is not None and st.session_state.modo_entrenamie
             """,
             unsafe_allow_html=True,
         )
-
-        # ---------------------------------------------------------------------
-        # SOLO RELOJ Y NÚMEROS (CUENTA ATRÁS AL TOCAR LOS NÚMEROS)
-        # ---------------------------------------------------------------------
-        ph_timer = st.empty()
-
-        # Disparador invisible/estilizado en la zona de los números
-        click_activar = ph_timer.button(
-            "⏱️ 15s",
-            key="timer_trigger_area",
-            use_container_width=True,
-        )
-
-        if click_activar:
-            for t in range(15, -1, -1):
-                # Verde al inicio, Rojo de 10s hacia abajo
-                color_class = "timer-red" if t <= 10 else "timer-green"
-                
-                ph_timer.markdown(
-                    f"""
-                    <div style="background: #0f172a; border: 2px solid #0284c7; border-radius: 16px; padding: 15px; text-align: center;">
-                        <div class="{color_class}">⏱️ {t}s</div>
-                    </div>
-                    """,
-                    unsafe_allow_html=True,
-                )
-                time.sleep(1)
-
-            # Estado finalizado
-            ph_timer.markdown(
-                """
-                <div style="background: #0f172a; border: 2px solid #22c55e; border-radius: 16px; padding: 15px; text-align: center;">
-                    <div style="font-size: 2.2rem; font-weight: 800; color: #22c55e;">🔔 ¡TIEMPO FINALIZADO!</div>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
-
-            # ALARMA DE AUDIO VÍA SINTETIZADOR DE FRECUENCIA
-            st.components.v1.html(
-                """
-                <script>
-                function sonarAlarma() {
-                    try {
-                        var AudioContext = window.AudioContext || window.webkitAudioContext;
-                        if (AudioContext) {
-                            var ctx = new AudioContext();
-                            if (ctx.state === 'suspended') { ctx.resume(); }
-
-                            function pitido(frecuencia, inicio, duracion) {
-                                var osc = ctx.createOscillator();
-                                var gain = ctx.createGain();
-                                osc.type = 'square';
-                                osc.frequency.value = frecuencia;
-                                gain.gain.setValueAtTime(0.4, ctx.currentTime + inicio);
-                                gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + inicio + duracion);
-                                osc.connect(gain);
-                                gain.connect(ctx.destination);
-                                osc.start(ctx.currentTime + inicio);
-                                osc.stop(ctx.currentTime + inicio + duracion);
-                            }
-
-                            pitido(900, 0, 0.25);
-                            pitido(900, 0.35, 0.25);
-                            pitido(1200, 0.7, 0.5);
-                        }
-                    } catch(e) { console.log(e); }
-                }
-                sonarAlarma();
-                </script>
-                """,
-                height=0,
-            )
 
         st.markdown("---")
 
