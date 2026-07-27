@@ -54,7 +54,7 @@ st.markdown(
         font-weight: 700 !important;
     }
 
-    /* Tarjetas de Métricas Secundarias Centradas (Fuerza / Estiramientos) */
+    /* Tarjetas de Métricas Secundarias Centradas */
     .sub-metric-card {
         text-align: center;
         background-color: #f8fafc;
@@ -118,13 +118,35 @@ st.markdown(
         line-height: 1.5;
     }
 
-    /* Botones de Descanso Grandes (Números) */
-    div[data-testid="stRadio"] > div {
+    /* Texto de Descanso en 2 líneas */
+    .rest-title {
+        text-align: center;
+        font-weight: 700;
+        color: #1e293b;
+        font-size: 0.95rem;
+        margin-top: 15px;
+        margin-bottom: 2px;
+    }
+    .rest-subtitle {
+        text-align: center;
+        font-weight: 600;
+        color: #64748b;
+        font-size: 0.85rem;
+        margin-bottom: 10px;
+    }
+
+    /* Opciones de Descanso Centradoras con Botones Grandes */
+    div[data-testid="stRadio"] {
+        display: flex;
         justify-content: center;
-        gap: 15px;
+        width: 100%;
+    }
+    div[data-testid="stRadio"] > div {
+        justify-content: center !important;
+        gap: 20px !important;
     }
     div[data-testid="stRadio"] label p {
-        font-size: 1.25rem !important;
+        font-size: 1.3rem !important;
         font-weight: 800 !important;
         color: #0f172a !important;
     }
@@ -140,7 +162,7 @@ st.markdown(
         border: none !important;
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
         display: block;
-        margin: 0 auto;
+        margin: 10px auto;
     }
 
     /* Temporizador Ubicado Debajo del Botón */
@@ -149,14 +171,14 @@ st.markdown(
         font-weight: 800;
         color: #16a34a;
         text-align: center;
-        margin: 10px 0;
+        margin: 5px 0 15px 0;
     }
     .timer-red {
         font-size: 3.5rem;
         font-weight: 800;
         color: #dc2626;
         text-align: center;
-        margin: 10px 0;
+        margin: 5px 0 15px 0;
     }
 
     /* Centrado de detalles del ejercicio */
@@ -167,20 +189,33 @@ st.markdown(
         margin-bottom: 10px;
     }
 
-    /* Barra de Progresión Atractiva */
+    /* Barra de Progresión Visual Atractiva */
     .progress-card {
-        background: #f8fafc;
-        border: 1px solid #e2e8f0;
+        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+        border: 1px solid #cbd5e1;
         border-radius: 12px;
-        padding: 10px 15px;
+        padding: 12px 16px;
         margin-top: 15px;
-        text-align: center;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
     }
-    .progress-text {
-        font-size: 0.85rem;
-        font-weight: 700;
-        color: #475569;
+    .progress-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
         margin-bottom: 6px;
+    }
+    .progress-label {
+        font-size: 0.9rem;
+        font-weight: 800;
+        color: #0f172a;
+    }
+    .progress-percentage {
+        font-size: 0.85rem;
+        font-weight: 800;
+        color: #0284c7;
+        background-color: #e0f2fe;
+        padding: 2px 8px;
+        border-radius: 10px;
     }
 
     /* Botones generales */
@@ -526,7 +561,6 @@ elif st.session_state.df_rutina is not None and st.session_state.modo_entrenamie
 
     df_rutina = st.session_state.df_rutina
     total_ejercicios = len(df_rutina)
-    total_pasos = total_ejercicios + 1
     paso_actual = st.session_state.paso_actual
 
     if paso_actual < total_ejercicios:
@@ -550,7 +584,7 @@ elif st.session_state.df_rutina is not None and st.session_state.modo_entrenamie
             unsafe_allow_html=True,
         )
 
-        # DESCRIPCIÓN TÉCNICA UBICADA ENCIMA DE LAS IMÁGENES
+        # DESCRIPCIÓN TÉCNICA ENCIMA DE LAS IMÁGENES
         desc_excel = row.get("Descripcion", row.get("Instrucciones", ""))
         texto_base = "Mantén la postura alineada, el abdomen activo, realiza un movimiento controlado sin balanceos bruscos y realiza constantemente una respiración fluida y no la bloquees."
         
@@ -568,7 +602,7 @@ elif st.session_state.df_rutina is not None and st.session_state.modo_entrenamie
             unsafe_allow_html=True,
         )
 
-        # MUESTRA DE IMÁGENES
+        # IMÁGENES
         columnas_fotos = ["Imagen_1", "Imagen_2", "Imagen_3", "Imagen_4"]
         urls_validas = [
             row[col]
@@ -582,7 +616,7 @@ elif st.session_state.df_rutina is not None and st.session_state.modo_entrenamie
                 with cols_img[index]:
                     st.image(url, caption=f"Paso {index + 1}", use_container_width=True)
 
-        # TARJETA DESTACADA "PRESCRIPCIÓN"
+        # PRESCRIPCIÓN
         st.markdown(
             f"""
             <div class="highlight-card">
@@ -593,13 +627,14 @@ elif st.session_state.df_rutina is not None and st.session_state.modo_entrenamie
             unsafe_allow_html=True,
         )
 
-        # ELECCIÓN DE TIEMPO DE DESCANSO CON SOLO LOS NÚMEROS Y 15 SEG POR DEFECTO
-        st.markdown("<p style='text-align: center; font-weight: 700; color: #475569; margin-top: 15px;'>Ajusta los segundos de tu descanso (menos descanso = entreno más duro):</p>", unsafe_allow_html=True)
+        # TEXTO DE DESCANSO EN DOS LÍNEAS Y CENTRADO
+        st.markdown('<div class="rest-title">Ajusta los segundos de tu descanso</div>', unsafe_allow_html=True)
+        st.markdown('<div class="rest-subtitle">(menos descanso = entreno más duro)</div>', unsafe_allow_html=True)
         
         descanso_elegido = st.radio(
             "Selecciona descanso",
             options=[60, 45, 30, 15],
-            index=3, # 15s seleccionado por defecto
+            index=3,  # 15s seleccionado por defecto
             horizontal=True,
             label_visibility="collapsed"
         )
@@ -609,7 +644,7 @@ elif st.session_state.df_rutina is not None and st.session_state.modo_entrenamie
         with col_btn_center[1]:
             timer_pressed = st.button("⏱️ Empezar TIEMPO de descanso", key="btn_tiempo", use_container_width=True)
 
-        # MOSTRAR EL TEMPORIZADOR EN PANTALLA
+        # TEMPORIZADOR
         ph_timer = st.empty()
         ph_timer.markdown(
             f'<div class="timer-display">⏱️ {descanso_elegido}s</div>',
@@ -630,7 +665,7 @@ elif st.session_state.df_rutina is not None and st.session_state.modo_entrenamie
                 unsafe_allow_html=True,
             )
 
-            # PITIDO AUDIBLE COMPATIBLE CON MÓVILES (iOS / ANDROID)
+            # PITIDO AUDIBLE COMPATIBLE CON MÓVILES
             st.components.v1.html(
                 """
                 <script>
@@ -639,8 +674,6 @@ elif st.session_state.df_rutina is not None and st.session_state.modo_entrenamie
                     if (!AudioContext) return;
                     
                     var ctx = new AudioContext();
-                    
-                    // Desbloqueo del contexto de audio en móviles
                     if (ctx.state === 'suspended') {
                         ctx.resume();
                     }
@@ -664,7 +697,6 @@ elif st.session_state.df_rutina is not None and st.session_state.modo_entrenamie
                         }, delay);
                     }
 
-                    // Trío de pitidos estridentes para sonido claro en altavoces móviles
                     emitBeep(0, 0.2, 880);
                     emitBeep(250, 0.2, 880);
                     emitBeep(500, 0.4, 1200);
@@ -677,7 +709,7 @@ elif st.session_state.df_rutina is not None and st.session_state.modo_entrenamie
 
         st.markdown("---")
 
-        # NAVEGACIÓN ENTRE EJERCICIOS
+        # NAVEGACIÓN
         col_nav1, col_nav2 = st.columns([1, 1])
 
         with col_nav1:
@@ -695,17 +727,35 @@ elif st.session_state.df_rutina is not None and st.session_state.modo_entrenamie
                 st.session_state.paso_actual += 1
                 st.rerun()
 
-        # BARRA DE PROGRESIÓN DEBAJO DEL BOTÓN DE NAVEGACIÓN
-        progreso_porcentaje = min(float((paso_actual + 1) / total_ejercicios), 1.0)
+        # BARRA DE PROGRESIÓN DINÁMICA Y ATRACTIVA
+        progreso_porcentaje = float((paso_actual + 1) / total_ejercicios)
+        porcentaje_num = int(progreso_porcentaje * 100)
+
+        # Selección del emoji según el avance
+        if porcentaje_num <= 25:
+            emoji_progreso = "🚀"
+        elif porcentaje_num <= 50:
+            emoji_progreso = "🔥"
+        elif porcentaje_num <= 75:
+            emoji_progreso = "⚡"
+        else:
+            emoji_progreso = "💪"
+
+        # Mostrar % únicamente si son más de 6 ejercicios
+        texto_porcentaje = f'<div class="progress-percentage">{porcentaje_num}% completado</div>' if total_ejercicios > 6 else ""
+
         st.markdown(
             f"""
             <div class="progress-card">
-                <div class="progress-text">Ejercicio <b>{paso_actual + 1} de {total_ejercicios}</b></div>
+                <div class="progress-header">
+                    <div class="progress-label">{emoji_progreso} Ejercicio {paso_actual + 1} de {total_ejercicios}</div>
+                    {texto_porcentaje}
+                </div>
             </div>
             """,
             unsafe_allow_html=True,
         )
-        st.progress(progreso_porcentaje)
+        st.progress(min(progreso_porcentaje, 1.0))
 
     elif paso_actual == total_ejercicios:
         st.markdown(
@@ -740,7 +790,10 @@ elif st.session_state.df_rutina is not None and st.session_state.modo_entrenamie
         st.markdown(
             """
             <div class="progress-card">
-                <div class="progress-text">Bloque Final: <b>Estiramientos</b></div>
+                <div class="progress-header">
+                    <div class="progress-label">🏁 Bloque Final: Estiramientos</div>
+                    <div class="progress-percentage">100% completado</div>
+                </div>
             </div>
             """,
             unsafe_allow_html=True,
