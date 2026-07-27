@@ -279,6 +279,90 @@ def generar_link_google_calendar(
     return f"https://calendar.google.com/calendar/render?{urllib.parse.urlencode(params)}"
 
 
+# Componente HTML del Temporizador
+def renderizar_temporizador_15s():
+    st.components.v1.html(
+        """
+        <div id="timer-box" onclick="startTimer()" style="
+            background-color: #000000;
+            border-radius: 12px;
+            padding: 15px;
+            text-align: center;
+            cursor: pointer;
+            user-select: none;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            margin: 10px 0;
+            border: 2px solid #22c55e;
+            transition: all 0.3s ease;
+        ">
+            <div id="timer-label" style="
+                color: #a3a3a3;
+                font-size: 0.85rem;
+                font-weight: 700;
+                letter-spacing: 1px;
+                text-transform: uppercase;
+                margin-bottom: 4px;
+                font-family: system-ui, -apple-system, sans-serif;
+            ">
+                ⏱️ Toca para iniciar descanso
+            </div>
+            <div id="timer-display" style="
+                color: #22c55e;
+                font-size: 3rem;
+                font-weight: 900;
+                font-family: monospace, monospace;
+                line-height: 1;
+            ">
+                15
+            </div>
+        </div>
+
+        <script>
+            let interval = null;
+            let count = 15;
+            let running = false;
+
+            function startTimer() {
+                if (running) return;
+                
+                running = true;
+                count = 15;
+                
+                const display = document.getElementById("timer-display");
+                const label = document.getElementById("timer-label");
+                const box = document.getElementById("timer-box");
+
+                label.innerText = "⏳ En curso...";
+                display.innerText = count;
+                display.style.color = "#22c55e";
+                box.style.borderColor = "#22c55e";
+
+                interval = setInterval(() => {
+                    count--;
+                    display.innerText = count;
+
+                    if (count <= 10) {
+                        display.style.color = "#ef4444";
+                        box.style.borderColor = "#ef4444";
+                    } else {
+                        display.style.color = "#22c55e";
+                        box.style.borderColor = "#22c55e";
+                    }
+
+                    if (count <= 0) {
+                        clearInterval(interval);
+                        running = false;
+                        label.innerText = "✅ ¡Tiempo completado! Toca para reiniciar";
+                        display.innerText = "0";
+                    }
+                }, 1000);
+            }
+        </script>
+        """,
+        height=110,
+    )
+
+
 # Inicialización de variables de sesión
 if "paso_actual" not in st.session_state:
     st.session_state.paso_actual = 0
@@ -556,6 +640,9 @@ elif st.session_state.df_rutina is not None and st.session_state.modo_entrenamie
             """,
             unsafe_allow_html=True,
         )
+
+        # TEMPORIZADOR INTERACTIVO 15S
+        renderizar_temporizador_15s()
 
         st.markdown("---")
 
