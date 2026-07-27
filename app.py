@@ -14,7 +14,7 @@ st.set_page_config(
 )
 
 # -----------------------------------------------------------------------------
-# CSS PERSONALIZADO (FUERZA BRUTA PARA EL BOTÓN Y ELEMENTOS)
+# CSS PERSONALIZADO
 # -----------------------------------------------------------------------------
 st.markdown(
     """
@@ -113,45 +113,44 @@ st.markdown(
     }
 
     /* =========================================================================
-       BOTÓN DE DESCANSO: FORZADO A FONDO OSCURO (#0F172A), NO BLANCO Y DOBLE TAMAÑO
+       TEMPORIZADOR CLICABLE (SIN BOTÓN, CON FONDO OSCURO)
        ========================================================================= */
-    div.stButton > button[key="btn_activar_descanso"],
-    div.stButton > button[key="btn_activar_descanso"]:focus,
-    div.stButton > button[key="btn_activar_descanso"]:visited {
-        background-color: #0f172a !important;
-        background-image: linear-gradient(135deg, #0f172a 0%, #1e293b 100%) !important;
-        color: #38bdf8 !important;
-        border: 3px solid #0284c7 !important;
-        border-radius: 18px !important;
-        padding: 26px 16px !important;
-        font-size: 1.5rem !important;
-        font-weight: 800 !important;
+    div.stButton > button[key="timer_clickable"] {
+        background: #0f172a !important;
+        border: 2px solid #0284c7 !important;
+        border-radius: 16px !important;
+        padding: 20px !important;
         width: 100% !important;
-        min-height: 110px !important;
-        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4) !important;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25) !important;
+        cursor: pointer !important;
     }
-
-    div.stButton > button[key="btn_activar_descanso"]:hover {
-        background-color: #1e293b !important;
-        background-image: linear-gradient(135deg, #1e293b 0%, #334155 100%) !important;
-        color: #7dd3fc !important;
+    div.stButton > button[key="timer_clickable"]:hover {
         border-color: #38bdf8 !important;
+        background: #1e293b !important;
     }
 
-    /* TEMPORIZADOR: VERDE INICIAL, ROJO DE 10 A 0 */
+    /* ESTILOS DE LOS NÚMEROS Y EMOJI */
     .timer-green {
-        font-size: 3.8rem;
+        font-size: 3.5rem;
         font-weight: 800;
-        color: #16a34a; /* Verde */
+        color: #22c55e; /* Verde */
         text-align: center;
-        margin: 10px 0;
+        line-height: 1.1;
     }
     .timer-red {
-        font-size: 3.8rem;
+        font-size: 3.5rem;
         font-weight: 800;
-        color: #dc2626; /* Rojo para 10, 9, 8... */
+        color: #ef4444; /* Rojo para 10s hacia abajo */
         text-align: center;
-        margin: 10px 0;
+        line-height: 1.1;
+    }
+    .timer-subtext {
+        font-size: 0.85rem;
+        color: #94a3b8;
+        text-align: center;
+        margin-top: 4px;
+        font-weight: 600;
+        letter-spacing: 0.5px;
     }
 
     /* Detalle del Ejercicio */
@@ -601,37 +600,48 @@ elif st.session_state.df_rutina is not None and st.session_state.modo_entrenamie
         )
 
         # ---------------------------------------------------------------------
-        # BOTÓN DE DESCANSO (FONDO OSCURO OBLIGATORIO + SONIDO POTENTE)
+        # TEMPORIZADOR INTERACTIVO (SIN BOTÓN)
         # ---------------------------------------------------------------------
         ph_timer = st.empty()
 
-        activar_pressed = ph_timer.button(
-            "⏱️ ACTIVA EL DESCANSO (15s)",
-            key="btn_activar_descanso",
+        # Al pulsar directamente en el panel del reloj/números se activa
+        click_reloj = ph_timer.button(
+            "⏱️  15s\n\n(Toca los números para iniciar descanso)",
+            key="timer_clickable",
             use_container_width=True,
         )
 
-        if activar_pressed:
+        if click_reloj:
             for t in range(15, -1, -1):
-                # Verde al inicio, Rojo de 10 seg a 0 seg
+                # Verde al inicio, Rojo de 10 seg hacia abajo (10, 9, 8...)
                 color_class = "timer-red" if t <= 10 else "timer-green"
+                
                 ph_timer.markdown(
-                    f'<div class="{color_class}">⏱️ {t}s</div>',
+                    f"""
+                    <div style="background: #0f172a; border: 2px solid #0284c7; border-radius: 16px; padding: 15px; text-align: center;">
+                        <div class="{color_class}">⏱️ {t}s</div>
+                    </div>
+                    """,
                     unsafe_allow_html=True,
                 )
                 time.sleep(1)
 
+            # Estado al finalizar
             ph_timer.markdown(
-                "<h3 style='text-align: center; color: #16a34a;'>🔔 ¡Tiempo finalizado!</h3>",
+                """
+                <div style="background: #0f172a; border: 2px solid #22c55e; border-radius: 16px; padding: 15px; text-align: center;">
+                    <div style="font-size: 2.2rem; font-weight: 800; color: #22c55e;">🔔 ¡TIEMPO FINALIZADO!</div>
+                    <div class="timer-subtext">Toca de nuevo para reiniciar</div>
+                </div>
+                """,
                 unsafe_allow_html=True,
             )
 
-            # SONIDO/ALARMA GARANTIZADO MEDIANTE REPRODUCTOR DE AUDIO REAL + SINTETIZADOR
+            # REPRODUCTOR DE SONIDO AUDIO API + HTML5
             st.components.v1.html(
                 """
                 <script>
                 function sonarAlarma() {
-                    // Opción 1: Tono sintetizado de alta intensidad (Web Audio API)
                     try {
                         var AudioContext = window.AudioContext || window.webkitAudioContext;
                         if (AudioContext) {
@@ -641,9 +651,9 @@ elif st.session_state.df_rutina is not None and st.session_state.modo_entrenamie
                             function pitido(frecuencia, inicio, duracion) {
                                 var osc = ctx.createOscillator();
                                 var gain = ctx.createGain();
-                                osc.type = 'triangle';
+                                osc.type = 'square';
                                 osc.frequency.value = frecuencia;
-                                gain.gain.setValueAtTime(1.0, ctx.currentTime + inicio);
+                                gain.gain.setValueAtTime(0.3, ctx.currentTime + inicio);
                                 gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + inicio + duracion);
                                 osc.connect(gain);
                                 gain.connect(ctx.destination);
@@ -651,18 +661,12 @@ elif st.session_state.df_rutina is not None and st.session_state.modo_entrenamie
                                 osc.stop(ctx.currentTime + inicio + duracion);
                             }
 
-                            // Secuencia de pitidos fuerte (Alarma)
-                            pitido(900, 0, 0.25);
-                            pitido(900, 0.3, 0.25);
-                            pitido(1200, 0.6, 0.5);
+                            // 3 pitidos fuertes de alarma
+                            pitido(880, 0, 0.2);
+                            pitido(880, 0.3, 0.2);
+                            pitido(1100, 0.6, 0.4);
                         }
                     } catch(e) { console.log(e); }
-
-                    // Opción 2: Fallback con audio base64 embebido
-                    try {
-                        var snd = new Audio("data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YU");
-                        snd.play();
-                    } catch(e) {}
                 }
                 sonarAlarma();
                 </script>
