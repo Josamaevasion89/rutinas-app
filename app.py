@@ -14,7 +14,7 @@ st.set_page_config(
 )
 
 # -----------------------------------------------------------------------------
-# CSS PERSONALIZADO
+# CSS PERSONALIZADO (PANEL DE DESCANSO TÁCTIL SIN ASPECTO DE BOTÓN)
 # -----------------------------------------------------------------------------
 st.markdown(
     """
@@ -113,44 +113,36 @@ st.markdown(
     }
 
     /* =========================================================================
-       TEMPORIZADOR CLICABLE (SIN BOTÓN, CON FONDO OSCURO)
+       PANEL DE TEMPORIZADOR SÓLO RELOJ Y NÚMEROS (SIN BOTÓN)
        ========================================================================= */
-    div.stButton > button[key="timer_clickable"] {
+    div.stButton > button[key="timer_trigger_area"] {
         background: #0f172a !important;
         border: 2px solid #0284c7 !important;
         border-radius: 16px !important;
-        padding: 20px !important;
+        padding: 18px 10px !important;
         width: 100% !important;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25) !important;
         cursor: pointer !important;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2) !important;
     }
-    div.stButton > button[key="timer_clickable"]:hover {
+    div.stButton > button[key="timer_trigger_area"]:hover {
         border-color: #38bdf8 !important;
         background: #1e293b !important;
     }
 
     /* ESTILOS DE LOS NÚMEROS Y EMOJI */
     .timer-green {
-        font-size: 3.5rem;
+        font-size: 3.6rem;
         font-weight: 800;
-        color: #22c55e; /* Verde */
+        color: #22c55e;
         text-align: center;
-        line-height: 1.1;
+        line-height: 1;
     }
     .timer-red {
-        font-size: 3.5rem;
+        font-size: 3.6rem;
         font-weight: 800;
-        color: #ef4444; /* Rojo para 10s hacia abajo */
+        color: #ef4444;
         text-align: center;
-        line-height: 1.1;
-    }
-    .timer-subtext {
-        font-size: 0.85rem;
-        color: #94a3b8;
-        text-align: center;
-        margin-top: 4px;
-        font-weight: 600;
-        letter-spacing: 0.5px;
+        line-height: 1;
     }
 
     /* Detalle del Ejercicio */
@@ -600,20 +592,20 @@ elif st.session_state.df_rutina is not None and st.session_state.modo_entrenamie
         )
 
         # ---------------------------------------------------------------------
-        # TEMPORIZADOR INTERACTIVO (SIN BOTÓN)
+        # SOLO RELOJ Y NÚMEROS (CUENTA ATRÁS AL TOCAR LOS NÚMEROS)
         # ---------------------------------------------------------------------
         ph_timer = st.empty()
 
-        # Al pulsar directamente en el panel del reloj/números se activa
-        click_reloj = ph_timer.button(
-            "⏱️  15s\n\n(Toca los números para iniciar descanso)",
-            key="timer_clickable",
+        # Disparador invisible/estilizado en la zona de los números
+        click_activar = ph_timer.button(
+            "⏱️ 15s",
+            key="timer_trigger_area",
             use_container_width=True,
         )
 
-        if click_reloj:
+        if click_activar:
             for t in range(15, -1, -1):
-                # Verde al inicio, Rojo de 10 seg hacia abajo (10, 9, 8...)
+                # Verde al inicio, Rojo de 10s hacia abajo
                 color_class = "timer-red" if t <= 10 else "timer-green"
                 
                 ph_timer.markdown(
@@ -626,18 +618,17 @@ elif st.session_state.df_rutina is not None and st.session_state.modo_entrenamie
                 )
                 time.sleep(1)
 
-            # Estado al finalizar
+            # Estado finalizado
             ph_timer.markdown(
                 """
                 <div style="background: #0f172a; border: 2px solid #22c55e; border-radius: 16px; padding: 15px; text-align: center;">
                     <div style="font-size: 2.2rem; font-weight: 800; color: #22c55e;">🔔 ¡TIEMPO FINALIZADO!</div>
-                    <div class="timer-subtext">Toca de nuevo para reiniciar</div>
                 </div>
                 """,
                 unsafe_allow_html=True,
             )
 
-            # REPRODUCTOR DE SONIDO AUDIO API + HTML5
+            # ALARMA DE AUDIO VÍA SINTETIZADOR DE FRECUENCIA
             st.components.v1.html(
                 """
                 <script>
@@ -653,7 +644,7 @@ elif st.session_state.df_rutina is not None and st.session_state.modo_entrenamie
                                 var gain = ctx.createGain();
                                 osc.type = 'square';
                                 osc.frequency.value = frecuencia;
-                                gain.gain.setValueAtTime(0.3, ctx.currentTime + inicio);
+                                gain.gain.setValueAtTime(0.4, ctx.currentTime + inicio);
                                 gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + inicio + duracion);
                                 osc.connect(gain);
                                 gain.connect(ctx.destination);
@@ -661,10 +652,9 @@ elif st.session_state.df_rutina is not None and st.session_state.modo_entrenamie
                                 osc.stop(ctx.currentTime + inicio + duracion);
                             }
 
-                            // 3 pitidos fuertes de alarma
-                            pitido(880, 0, 0.2);
-                            pitido(880, 0.3, 0.2);
-                            pitido(1100, 0.6, 0.4);
+                            pitido(900, 0, 0.25);
+                            pitido(900, 0.35, 0.25);
+                            pitido(1200, 0.7, 0.5);
                         }
                     } catch(e) { console.log(e); }
                 }
