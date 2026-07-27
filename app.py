@@ -292,7 +292,7 @@ def renderizar_temporizador_15s():
             user-select: none;
             box-shadow: 0 4px 10px rgba(0,0,0,0.3);
             margin: 10px 0;
-            border: 2px solid #38bdf8;
+            border: 2px solid #1d4ed8;
             transition: all 0.3s ease;
         ">
             <div id="timer-label" style="
@@ -304,10 +304,10 @@ def renderizar_temporizador_15s():
                 margin-bottom: 4px;
                 font-family: system-ui, -apple-system, sans-serif;
             ">
-                ⏱️ Toca para iniciar descanso
+                ⏱️ TOCA PARA INICIAR DESCANSO
             </div>
             <div id="timer-display" style="
-                color: #38bdf8;
+                color: #22c55e;
                 font-size: 3rem;
                 font-weight: 900;
                 font-family: monospace, monospace;
@@ -332,32 +332,33 @@ def renderizar_temporizador_15s():
                 const label = document.getElementById("timer-label");
                 const box = document.getElementById("timer-box");
 
-                label.innerText = "⏳ En curso...";
+                label.innerText = "PRÓXIMA REPETICIÓN EN...";
                 display.innerText = count + "s";
-                display.style.color = "#38bdf8";
-                box.style.borderColor = "#38bdf8";
+                display.style.color = "#22c55e";
+                box.style.borderColor = "#1d4ed8";
 
                 interval = setInterval(() => {
                     count--;
                     display.innerText = count + "s";
 
-                    if (count <= 5) {
+                    // Al llegar a 10s o menos, cambia a rojo
+                    if (count <= 10) {
                         display.style.color = "#ef4444";
                         box.style.borderColor = "#ef4444";
                     } else {
-                        display.style.color = "#38bdf8";
-                        box.style.borderColor = "#38bdf8";
+                        display.style.color = "#22c55e";
+                        box.style.borderColor = "#1d4ed8";
                     }
 
+                    // Al terminar, restablece el estado inicial a 15s y el texto
                     if (count <= 0) {
                         clearInterval(interval);
                         running = false;
                         
-                        // Estado al finalizar: Muestra mensaje y se reajusta inmediatamente a 15s para volver a iniciar
-                        label.innerText = "✅ ¡Tiempo completado! Toca para repetir";
+                        label.innerText = "⏱️ TOCA PARA INICIAR DESCANSO";
                         display.innerText = "15s";
-                        display.style.color = "#38bdf8";
-                        box.style.borderColor = "#38bdf8";
+                        display.style.color = "#22c55e";
+                        box.style.borderColor = "#1d4ed8";
                     }
                 }, 1000);
             }
@@ -645,7 +646,7 @@ elif st.session_state.df_rutina is not None and st.session_state.modo_entrenamie
             unsafe_allow_html=True,
         )
 
-        # TEMPORIZADOR INTERACTIVO 15S
+        # TEMPORIZADOR INTERACTIVO 15S (MODIFICADO)
         renderizar_temporizador_15s()
 
         st.markdown("---")
