@@ -279,12 +279,12 @@ def generar_link_google_calendar(
     return f"https://calendar.google.com/calendar/render?{urllib.parse.urlencode(params)}"
 
 
-# Componente HTML del Temporizador
+# Componente HTML del Temporizador Modificado
 def renderizar_temporizador_15s():
     st.components.v1.html(
         """
         <div id="timer-box" onclick="startTimer()" style="
-            background-color: #000000;
+            background-color: #0f172a;
             border-radius: 12px;
             padding: 15px;
             text-align: center;
@@ -292,11 +292,11 @@ def renderizar_temporizador_15s():
             user-select: none;
             box-shadow: 0 4px 10px rgba(0,0,0,0.3);
             margin: 10px 0;
-            border: 2px solid #22c55e;
+            border: 2px solid #38bdf8;
             transition: all 0.3s ease;
         ">
             <div id="timer-label" style="
-                color: #a3a3a3;
+                color: #94a3b8;
                 font-size: 0.85rem;
                 font-weight: 700;
                 letter-spacing: 1px;
@@ -307,13 +307,13 @@ def renderizar_temporizador_15s():
                 ⏱️ Toca para iniciar descanso
             </div>
             <div id="timer-display" style="
-                color: #22c55e;
+                color: #38bdf8;
                 font-size: 3rem;
                 font-weight: 900;
                 font-family: monospace, monospace;
                 line-height: 1;
             ">
-                15
+                15s
             </div>
         </div>
 
@@ -333,27 +333,31 @@ def renderizar_temporizador_15s():
                 const box = document.getElementById("timer-box");
 
                 label.innerText = "⏳ En curso...";
-                display.innerText = count;
-                display.style.color = "#22c55e";
-                box.style.borderColor = "#22c55e";
+                display.innerText = count + "s";
+                display.style.color = "#38bdf8";
+                box.style.borderColor = "#38bdf8";
 
                 interval = setInterval(() => {
                     count--;
-                    display.innerText = count;
+                    display.innerText = count + "s";
 
-                    if (count <= 10) {
+                    if (count <= 5) {
                         display.style.color = "#ef4444";
                         box.style.borderColor = "#ef4444";
                     } else {
-                        display.style.color = "#22c55e";
-                        box.style.borderColor = "#22c55e";
+                        display.style.color = "#38bdf8";
+                        box.style.borderColor = "#38bdf8";
                     }
 
                     if (count <= 0) {
                         clearInterval(interval);
                         running = false;
-                        label.innerText = "✅ ¡Tiempo completado! Toca para reiniciar";
-                        display.innerText = "0";
+                        
+                        // Estado al finalizar: Muestra mensaje y se reajusta inmediatamente a 15s para volver a iniciar
+                        label.innerText = "✅ ¡Tiempo completado! Toca para repetir";
+                        display.innerText = "15s";
+                        display.style.color = "#38bdf8";
+                        box.style.borderColor = "#38bdf8";
                     }
                 }, 1000);
             }
