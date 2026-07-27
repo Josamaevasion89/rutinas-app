@@ -76,7 +76,7 @@ st.markdown(
         margin-top: 2px;
     }
 
-    /* Tarjeta Destacada Base (Prescripción y Descanso) */
+    /* Tarjeta Destacada Prescripción */
     .highlight-card {
         text-align: center;
         background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
@@ -112,53 +112,46 @@ st.markdown(
         line-height: 1.5;
     }
 
-    /* Botón de Activación Directa del Descanso estilo Tarjeta Azul */
+    /* =========================================================================
+       BOTÓN DE DESCANSO: EL DOBLE DE GRANDE, CON EMOJI Y FONDO OSCURO (NO BLANCO)
+       ========================================================================= */
     div.stButton > button[key="btn_activar_descanso"] {
-        background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%) !important;
-        border: 1px solid #334155 !important;
-        border-radius: 12px !important;
-        padding: 14px !important;
+        background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%) !important;
+        color: #38bdf8 !important;
+        border: 2px solid #38bdf8 !important;
+        border-radius: 16px !important;
+        padding: 28px 20px !important; /* Doble de alto/grande */
+        font-size: 1.5rem !important;  /* Tamaño de fuente doble */
+        font-weight: 800 !important;
         width: 100% !important;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.15) !important;
+        min-height: 110px !important;  /* Altura amplia */
+        box-shadow: 0 6px 12px -2px rgba(0, 0, 0, 0.3) !important;
         transition: transform 0.1s ease, border-color 0.2s ease !important;
+        white-space: pre-wrap !important;
     }
     div.stButton > button[key="btn_activar_descanso"]:hover {
-        border-color: #38bdf8 !important;
+        border-color: #7dd3fc !important;
+        color: #7dd3fc !important;
+        background: linear-gradient(135deg, #1e293b 0%, #334155 100%) !important;
     }
     div.stButton > button[key="btn_activar_descanso"]:active {
         transform: scale(0.98);
     }
-    
-    .rest-title-text {
-        font-size: 0.85rem;
-        color: #94a3b8;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-        font-weight: 600;
-        text-align: center;
-    }
-    .rest-value-text {
-        font-size: 1.8rem;
-        font-weight: 800;
-        color: #38bdf8;
-        margin-top: 2px;
-        text-align: center;
-    }
 
-    /* Temporizador Cuenta Regresiva */
-    .timer-display {
-        font-size: 3.5rem;
+    /* TEMPORIZADOR: VERDE INICIAL, ROJO DE 10 A 0 */
+    .timer-green {
+        font-size: 3.8rem;
         font-weight: 800;
-        color: #38bdf8;
+        color: #16a34a; /* Verde */
         text-align: center;
-        margin: 5px 0 15px 0;
+        margin: 10px 0;
     }
     .timer-red {
-        font-size: 3.5rem;
+        font-size: 3.8rem;
         font-weight: 800;
-        color: #dc2626;
+        color: #dc2626; /* Rojo para 10, 9, 8... */
         text-align: center;
-        margin: 5px 0 15px 0;
+        margin: 10px 0;
     }
 
     /* Detalle del Ejercicio */
@@ -608,19 +601,20 @@ elif st.session_state.df_rutina is not None and st.session_state.modo_entrenamie
         )
 
         # ---------------------------------------------------------------------
-        # BOTÓN DE DESCANSO CON EL MISMO DISEÑO Y COLOR AZUL (#38bdf8)
+        # BOTÓN DE DESCANSO (DOBLE DE GRANDE, EMOJI, FONDO OSCURO)
         # ---------------------------------------------------------------------
         ph_timer = st.empty()
 
         activar_pressed = ph_timer.button(
-            "ACTIVA EL DESCANSO\n15s",
+            "⏱️ ACTIVA EL DESCANSO (15s)",
             key="btn_activar_descanso",
             use_container_width=True,
         )
 
         if activar_pressed:
             for t in range(15, -1, -1):
-                color_class = "timer-red" if t <= 5 else "timer-display"
+                # Verde al inicio, Rojo de 10 seg a 0 seg
+                color_class = "timer-red" if t <= 10 else "timer-green"
                 ph_timer.markdown(
                     f'<div class="{color_class}">⏱️ {t}s</div>',
                     unsafe_allow_html=True,
