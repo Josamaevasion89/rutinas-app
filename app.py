@@ -76,7 +76,7 @@ st.markdown(
         margin-top: 2px;
     }
 
-    /* Tarjeta Destacada */
+    /* Tarjeta Destacada Base (Prescripción y Descanso) */
     .highlight-card {
         text-align: center;
         background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
@@ -112,37 +112,44 @@ st.markdown(
         line-height: 1.5;
     }
 
-    /* Botón de Activación Directa del Descanso (Simula la tarjeta de tiempo) */
+    /* Botón de Activación Directa del Descanso estilo Tarjeta Azul */
     div.stButton > button[key="btn_activar_descanso"] {
-        background: linear-gradient(135deg, #16a34a 0%, #15803d 100%) !important;
-        color: #ffffff !important;
-        border: none !important;
-        border-radius: 16px !important;
-        padding: 12px 20px !important;
-        box-shadow: 0 4px 10px rgba(22, 163, 74, 0.3) !important;
-        transition: transform 0.1s ease !important;
+        background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%) !important;
+        border: 1px solid #334155 !important;
+        border-radius: 12px !important;
+        padding: 14px !important;
+        width: 100% !important;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.15) !important;
+        transition: transform 0.1s ease, border-color 0.2s ease !important;
+    }
+    div.stButton > button[key="btn_activar_descanso"]:hover {
+        border-color: #38bdf8 !important;
     }
     div.stButton > button[key="btn_activar_descanso"]:active {
         transform: scale(0.98);
     }
-    .rest-trigger-text {
-        font-size: 1.1rem;
-        font-weight: 800;
+    
+    .rest-title-text {
+        font-size: 0.85rem;
+        color: #94a3b8;
         text-transform: uppercase;
-        letter-spacing: 0.5px;
+        letter-spacing: 1px;
+        font-weight: 600;
+        text-align: center;
     }
-    .rest-trigger-num {
-        font-size: 2.2rem;
-        font-weight: 900;
-        line-height: 1;
+    .rest-value-text {
+        font-size: 1.8rem;
+        font-weight: 800;
+        color: #38bdf8;
         margin-top: 2px;
+        text-align: center;
     }
 
     /* Temporizador Cuenta Regresiva */
     .timer-display {
         font-size: 3.5rem;
         font-weight: 800;
-        color: #16a34a;
+        color: #38bdf8;
         text-align: center;
         margin: 5px 0 15px 0;
     }
@@ -589,7 +596,7 @@ elif st.session_state.df_rutina is not None and st.session_state.modo_entrenamie
                 with cols_img[index]:
                     st.image(url, caption=f"Paso {index + 1}", use_container_width=True)
 
-        # PRESCRIPCIÓN
+        # PRESCRIPCIÓN DE TRABAJO
         st.markdown(
             f"""
             <div class="highlight-card">
@@ -601,13 +608,12 @@ elif st.session_state.df_rutina is not None and st.session_state.modo_entrenamie
         )
 
         # ---------------------------------------------------------------------
-        # ACTIVACIÓN DIRECTA DE DESCANSO (15s) AL PULSAR EN EL BLOQUE / NÚMERO
+        # BOTÓN DE DESCANSO CON EL MISMO DISEÑO Y COLOR AZUL (#38bdf8)
         # ---------------------------------------------------------------------
         ph_timer = st.empty()
 
-        # Botón con apariencia de tarjeta grande interactiva
         activar_pressed = ph_timer.button(
-            "⏱️ ACTIVA EL DESCANSO\n15s",
+            "ACTIVA EL DESCANSO\n15s",
             key="btn_activar_descanso",
             use_container_width=True,
         )
