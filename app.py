@@ -218,8 +218,8 @@ with col_usr2:
 
 
 def normalizar_texto(texto):
-    if texto is None or not isinstance(texto, str):
-        texto = str(texto) if texto is not None else ""
+    if not isinstance(texto, str):
+        return ""
     texto = texto.lower().strip()
     return "".join(
         c
@@ -244,12 +244,12 @@ except Exception as e:
 
 
 def obtener_prescripcion(nivel, categoria):
-    cat = normalizar_texto(categoria)
+    cat = normalizar_texto(str(categoria))
 
-    if str(nivel) == "Básico":
+    if nivel == "Básico":
         num_series = 3
         reps_texto = "10-12 reps" if "core" not in cat else "30 seg trabajo"
-    elif str(nivel) == "Intermedio":
+    elif nivel == "Intermedio":
         num_series = 4
         reps_texto = "12-15 reps" if "core" not in cat else "45 seg trabajo"
     else:
@@ -266,40 +266,40 @@ def generar_link_google_calendar(
         manana = datetime.now() + timedelta(days=1)
         fecha_inicio = manana.replace(hour=10, minute=0, second=0, microsecond=0)
 
-    fecha_fin = fecha_inicio + timedelta(minutes=int(duracion_minutos))
+    fecha_fin = fecha_inicio + timedelta(minutes=duracion_minutos)
     fmt = "%Y%m%dT%H%M%SZ"
     dates_str = f"{fecha_inicio.strftime(fmt)}/{fecha_fin.strftime(fmt)}"
 
     params = {
         "action": "TEMPLATE",
-        "text": str(titulo),
-        "details": str(descripcion),
+        "text": titulo,
+        "details": descripcion,
         "dates": dates_str,
     }
     return f"https://calendar.google.com/calendar/render?{urllib.parse.urlencode(params)}"
 
 
-# Componente HTML del Temporizador (Fondo claro con alto contraste)
-def renderizar_temporizador_15s(paso_id):
+# Componente HTML del Temporizador Modificado
+def renderizar_temporizador_15s():
     st.components.v1.html(
         """
         <div id="timer-box" onclick="startTimer()" style="
-            background-color: #f8fafc;
+            background-color: #0f172a;
             border-radius: 12px;
-            padding: 14px;
+            padding: 15px;
             text-align: center;
             cursor: pointer;
             user-select: none;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
             margin: 10px 0;
-            border: 2px solid #2563eb;
+            border: 2px solid #1d4ed8;
             transition: all 0.3s ease;
         ">
             <div id="timer-label" style="
-                color: #475569;
+                color: #94a3b8;
                 font-size: 0.85rem;
                 font-weight: 700;
-                letter-spacing: 0.5px;
+                letter-spacing: 1px;
                 text-transform: uppercase;
                 margin-bottom: 4px;
                 font-family: system-ui, -apple-system, sans-serif;
@@ -307,8 +307,8 @@ def renderizar_temporizador_15s(paso_id):
                 ⏱️ TOCA PARA INICIAR DESCANSO
             </div>
             <div id="timer-display" style="
-                color: #16a34a;
-                font-size: 2.8rem;
+                color: #22c55e;
+                font-size: 3rem;
                 font-weight: 900;
                 font-family: monospace, monospace;
                 line-height: 1;
@@ -334,8 +334,8 @@ def renderizar_temporizador_15s(paso_id):
 
                 label.innerText = "PRÓXIMA REPETICIÓN EN...";
                 display.innerText = count + "s";
-                display.style.color = "#16a34a";
-                box.style.borderColor = "#2563eb";
+                display.style.color = "#22c55e";
+                box.style.borderColor = "#1d4ed8";
 
                 interval = setInterval(() => {
                     count--;
@@ -343,29 +343,28 @@ def renderizar_temporizador_15s(paso_id):
 
                     // Al llegar a 10s o menos, cambia a rojo
                     if (count <= 10) {
-                        display.style.color = "#dc2626";
-                        box.style.borderColor = "#dc2626";
+                        display.style.color = "#ef4444";
+                        box.style.borderColor = "#ef4444";
                     } else {
-                        display.style.color = "#16a34a";
-                        box.style.borderColor = "#2563eb";
+                        display.style.color = "#22c55e";
+                        box.style.borderColor = "#1d4ed8";
                     }
 
-                    // Al terminar, restablece el estado inicial
+                    // Al terminar, restablece el estado inicial a 15s y el texto
                     if (count <= 0) {
                         clearInterval(interval);
                         running = false;
                         
                         label.innerText = "⏱️ TOCA PARA INICIAR DESCANSO";
                         display.innerText = "15s";
-                        display.style.color = "#16a34a";
-                        box.style.borderColor = "#2563eb";
+                        display.style.color = "#22c55e";
+                        box.style.borderColor = "#1d4ed8";
                     }
                 }, 1000);
             }
         </script>
         """,
         height=110,
-        key=f"timer_comp_{paso_id}",
     )
 
 
@@ -399,7 +398,7 @@ if not st.session_state.modo_entrenamiento:
         col_n1, col_n2, col_n3 = st.columns([1, 1, 1])
 
         with col_n1:
-            niveles_disponibles = df_ejercicios["Nivel"].dropna().unique().tolist() if "Nivel" in df_ejercicios.columns else []
+            niveles_disponibles = df_ejercicios["Nivel"].dropna().unique().tolist()
             if not niveles_disponibles:
                 niveles_disponibles = ["Básico", "Intermedio", "Avanzado"]
             nivel_seleccionado = st.selectbox(
@@ -432,7 +431,7 @@ if not st.session_state.modo_entrenamiento:
             value="30 min",
         )
 
-        duracion_minutos_total = int(str(duracion_seleccionada).split()[0])
+        duracion_minutos_total = int(duracion_seleccionada.split()[0])
         TIEMPO_ESTIRAMIENTOS_MIN = 10
         duracion_fuerza_min = max(5, duracion_minutos_total - TIEMPO_ESTIRAMIENTOS_MIN)
 
@@ -445,12 +444,12 @@ if not st.session_state.modo_entrenamiento:
             df_filtrado = df_ejercicios.copy()
 
             if "Nivel" in df_filtrado.columns:
-                df_filtrado = df_filtrado[df_filtrado["Nivel"].astype(str) == str(nivel_seleccionado)]
+                df_filtrado = df_filtrado[df_filtrado["Nivel"] == nivel_seleccionado]
 
             if tren_seleccionado != OPCION_BLANCO:
                 tren_norm = normalizar_texto(tren_seleccionado)
                 cols_categoria = [
-                    c for c in df_filtrado.columns if any(k in str(c).lower() for k in ["tren", "categoria", "grupo", "zona"])
+                    c for c in df_filtrado.columns if any(k in c.lower() for k in ["tren", "categoria", "grupo", "zona"])
                 ]
                 if cols_categoria:
                     col_cat = cols_categoria[0]
@@ -461,7 +460,7 @@ if not st.session_state.modo_entrenamiento:
             if objetivo_seleccionado != OPCION_BLANCO:
                 obj_norm = normalizar_texto(objetivo_seleccionado)
                 cols_objetivo = [
-                    c for c in df_filtrado.columns if any(k in str(c).lower() for k in ["objetivo", "dolor", "enfoque", "patologia"])
+                    c for c in df_filtrado.columns if any(k in c.lower() for k in ["objetivo", "dolor", "enfoque", "patologia"])
                 ]
                 if cols_objetivo:
                     col_obj = cols_objetivo[0]
@@ -473,18 +472,11 @@ if not st.session_state.modo_entrenamiento:
                 st.warning(
                     "⚠️ No se encontraron ejercicios exactamente con esos filtros. Se utilizarán ejercicios compatibles."
                 )
-                if "Nivel" in df_ejercicios.columns:
-                    df_filtrado = df_ejercicios[df_ejercicios["Nivel"].astype(str) == str(nivel_seleccionado)]
-                else:
-                    df_filtrado = df_ejercicios.copy()
+                df_filtrado = df_ejercicios[df_ejercicios["Nivel"] == nivel_seleccionado]
 
-            ejercicios_objetivo = max(2, int(round(duracion_fuerza_min / 4)))
+            ejercicios_objetivo = max(2, round(duracion_fuerza_min / 4))
             cantidad_final = min(ejercicios_objetivo, len(df_filtrado))
-            
-            if cantidad_final > 0:
-                df_rutina = df_filtrado.sample(n=cantidad_final).reset_index(drop=True)
-            else:
-                df_rutina = df_ejercicios.head(2).reset_index(drop=True)
+            df_rutina = df_filtrado.sample(n=cantidad_final).reset_index(drop=True)
 
             st.session_state.df_rutina = df_rutina
             st.session_state.tiempo_estimado = duracion_fuerza_min
@@ -498,7 +490,7 @@ if not st.session_state.modo_entrenamiento:
     # -------------------------------------------------------------------------
     # RESUMEN DE TIEMPOS
     # -------------------------------------------------------------------------
-    if st.session_state.df_rutina is not None and not st.session_state.df_rutina.empty:
+    if st.session_state.df_rutina is not None:
         df_rutina = st.session_state.df_rutina
         tiempo_ejercicios = st.session_state.tiempo_estimado
         tiempo_total_sesion = tiempo_ejercicios + TIEMPO_ESTIRAMIENTOS_MIN
@@ -542,7 +534,7 @@ if not st.session_state.modo_entrenamiento:
 
         st.markdown("<br>", unsafe_allow_html=True)
 
-        nombres_ejercicios = ", ".join(df_rutina["Nombre"].astype(str).tolist()) if "Nombre" in df_rutina.columns else "Ejercicios varios"
+        nombres_ejercicios = ", ".join(df_rutina["Nombre"].tolist()) if "Nombre" in df_rutina.columns else "Ejercicios varios"
         titulo_evento = f"🏋️‍♂️ Rutina W360 ({tiempo_total_sesion} min) - {st.session_state.usuario_actual}"
         descripcion_evento = (
             f"Sesión de entrenamiento personal:\n\n"
@@ -594,7 +586,7 @@ elif st.session_state.df_rutina is not None and st.session_state.modo_entrenamie
         row = df_rutina.iloc[paso_actual]
         nivel_sel = st.session_state.nivel_seleccionado
 
-        nombre_ej = str(row.get("Nombre", f"Ejercicio {paso_actual + 1}"))
+        nombre_ej = row.get("Nombre", f"Ejercicio {paso_actual + 1}")
         st.markdown(
             f'<div class="exercise-title">{nombre_ej}</div>',
             unsafe_allow_html=True,
@@ -602,9 +594,9 @@ elif st.session_state.df_rutina is not None and st.session_state.modo_entrenamie
 
         series_reps = obtener_prescripcion(nivel_sel, row.get("Tren", ""))
 
-        patron = str(row.get("Patron Movimiento", row.get("Patrón", "-")))
-        material = str(row.get("Material", "-"))
-        grupo_m = str(row.get("Grupo Muscular", row.get("Tren", "-")))
+        patron = row.get("Patron Movimiento", row.get("Patrón", "-"))
+        material = row.get("Material", "-")
+        grupo_m = row.get("Grupo Muscular", row.get("Tren", "-"))
 
         st.markdown(
             f'<div class="exercise-details"><b>Patrón:</b> {patron} &nbsp;|&nbsp; <b>Material:</b> {material} &nbsp;|&nbsp; <b>Estructura:</b> {grupo_m}</div>',
@@ -612,7 +604,7 @@ elif st.session_state.df_rutina is not None and st.session_state.modo_entrenamie
         )
 
         # DESCRIPCIÓN TÉCNICA
-        desc_excel = str(row.get("Descripcion", row.get("Instrucciones", "")))
+        desc_excel = row.get("Descripcion", row.get("Instrucciones", ""))
         texto_base = "Mantén la postura alineada, el abdomen activo, realiza un movimiento controlado sin balanceos bruscos y realiza constantemente una respiración fluida y no la bloquees."
         
         if desc_excel and desc_excel != "-":
@@ -632,7 +624,7 @@ elif st.session_state.df_rutina is not None and st.session_state.modo_entrenamie
         # IMÁGENES
         columnas_fotos = ["Imagen_1", "Imagen_2", "Imagen_3", "Imagen_4"]
         urls_validas = [
-            str(row[col])
+            row[col]
             for col in columnas_fotos
             if col in row and pd.notna(row[col]) and str(row[col]).strip() != "-" and str(row[col]).strip()
         ]
@@ -654,8 +646,8 @@ elif st.session_state.df_rutina is not None and st.session_state.modo_entrenamie
             unsafe_allow_html=True,
         )
 
-        # TEMPORIZADOR INTERACTIVO 15S (Clave única por paso para reinicio automático)
-        renderizar_temporizador_15s(paso_actual)
+        # TEMPORIZADOR INTERACTIVO 15S (MODIFICADO)
+        renderizar_temporizador_15s()
 
         st.markdown("---")
 
@@ -678,7 +670,7 @@ elif st.session_state.df_rutina is not None and st.session_state.modo_entrenamie
                 st.rerun()
 
         # BARRA DE PROGRESIÓN
-        progreso_porcentaje = float((paso_actual + 1) / total_ejercicios) if total_ejercicios > 0 else 1.0
+        progreso_porcentaje = float((paso_actual + 1) / total_ejercicios)
         porcentaje_num = int(progreso_porcentaje * 100)
 
         if porcentaje_num <= 25:
