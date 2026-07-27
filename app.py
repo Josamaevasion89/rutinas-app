@@ -93,12 +93,6 @@ st.markdown(
         letter-spacing: 1px;
         font-weight: 600;
     }
-    .highlight-card-value {
-        font-size: 1.8rem;
-        font-weight: 800;
-        color: #38bdf8;
-        margin-top: 2px;
-    }
     .highlight-card-desc {
         font-size: 1.15rem;
         font-weight: 700;
@@ -106,7 +100,7 @@ st.markdown(
         margin-top: 4px;
     }
 
-    /* Tarjeta de Descripción Técnica Ubicada Arriba */
+    /* Tarjeta de Descripción Técnica */
     .description-card {
         background-color: #f1f5f9;
         border-left: 4px solid #0284c7;
@@ -118,54 +112,33 @@ st.markdown(
         line-height: 1.5;
     }
 
-    /* Texto de Descanso en 2 líneas */
-    .rest-title {
-        text-align: center;
-        font-weight: 700;
-        color: #1e293b;
-        font-size: 0.95rem;
-        margin-top: 15px;
-        margin-bottom: 2px;
-    }
-    .rest-subtitle {
-        text-align: center;
-        font-weight: 600;
-        color: #64748b;
-        font-size: 0.85rem;
-        margin-bottom: 10px;
-    }
-
-    /* Opciones de Descanso Centradoras con Botones Grandes */
-    div[data-testid="stRadio"] {
-        display: flex;
-        justify-content: center;
-        width: 100%;
-    }
-    div[data-testid="stRadio"] > div {
-        justify-content: center !important;
-        gap: 20px !important;
-    }
-    div[data-testid="stRadio"] label p {
-        font-size: 1.3rem !important;
-        font-weight: 800 !important;
-        color: #0f172a !important;
-    }
-
-    /* Botón de Tiempo: Pequeño, Centrado, Fondo VERDE y Letra BLANCA */
-    div.stButton > button[key="btn_tiempo"] {
-        background-color: #16a34a !important;
+    /* Botón de Activación Directa del Descanso (Simula la tarjeta de tiempo) */
+    div.stButton > button[key="btn_activar_descanso"] {
+        background: linear-gradient(135deg, #16a34a 0%, #15803d 100%) !important;
         color: #ffffff !important;
-        font-weight: 800 !important;
-        font-size: 0.95rem !important;
-        padding: 8px 22px !important;
-        border-radius: 20px !important;
         border: none !important;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-        display: block;
-        margin: 10px auto;
+        border-radius: 16px !important;
+        padding: 12px 20px !important;
+        box-shadow: 0 4px 10px rgba(22, 163, 74, 0.3) !important;
+        transition: transform 0.1s ease !important;
+    }
+    div.stButton > button[key="btn_activar_descanso"]:active {
+        transform: scale(0.98);
+    }
+    .rest-trigger-text {
+        font-size: 1.1rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    .rest-trigger-num {
+        font-size: 2.2rem;
+        font-weight: 900;
+        line-height: 1;
+        margin-top: 2px;
     }
 
-    /* Temporizador Ubicado Debajo del Botón */
+    /* Temporizador Cuenta Regresiva */
     .timer-display {
         font-size: 3.5rem;
         font-weight: 800;
@@ -181,7 +154,7 @@ st.markdown(
         margin: 5px 0 15px 0;
     }
 
-    /* Centrado de detalles del ejercicio */
+    /* Detalle del Ejercicio */
     .exercise-details {
         text-align: center;
         font-size: 0.95rem;
@@ -189,7 +162,7 @@ st.markdown(
         margin-bottom: 10px;
     }
 
-    /* Barra de Progresión Visual Atractiva */
+    /* Barra de Progresión */
     .progress-card {
         background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
         border: 1px solid #cbd5e1;
@@ -469,7 +442,7 @@ if not st.session_state.modo_entrenamiento:
     st.markdown("---")
 
     # -------------------------------------------------------------------------
-    # RESUMEN DE TIEMPOS COMPLETAMENTE CENTRADO
+    # RESUMEN DE TIEMPOS
     # -------------------------------------------------------------------------
     if st.session_state.df_rutina is not None:
         df_rutina = st.session_state.df_rutina
@@ -507,7 +480,7 @@ if not st.session_state.modo_entrenamiento:
             f"""
             <div class="highlight-card">
                 <div class="highlight-card-subtitle">Tiempo Total Sesión</div>
-                <div class="highlight-card-value">{tiempo_total_sesion} min</div>
+                <div class="highlight-card-value" style="font-size: 1.8rem; font-weight: 800; color: #38bdf8;">{tiempo_total_sesion} min</div>
             </div>
             """,
             unsafe_allow_html=True,
@@ -584,7 +557,7 @@ elif st.session_state.df_rutina is not None and st.session_state.modo_entrenamie
             unsafe_allow_html=True,
         )
 
-        # DESCRIPCIÓN TÉCNICA ENCIMA DE LAS IMÁGENES
+        # DESCRIPCIÓN TÉCNICA
         desc_excel = row.get("Descripcion", row.get("Instrucciones", ""))
         texto_base = "Mantén la postura alineada, el abdomen activo, realiza un movimiento controlado sin balanceos bruscos y realiza constantemente una respiración fluida y no la bloquees."
         
@@ -627,35 +600,23 @@ elif st.session_state.df_rutina is not None and st.session_state.modo_entrenamie
             unsafe_allow_html=True,
         )
 
-        # TEXTO DE DESCANSO EN DOS LÍNEAS Y CENTRADO
-        st.markdown('<div class="rest-title">Ajusta los segundos de tu descanso</div>', unsafe_allow_html=True)
-        st.markdown('<div class="rest-subtitle">(menos descanso = entreno más duro)</div>', unsafe_allow_html=True)
-        
-        descanso_elegido = st.radio(
-            "Selecciona descanso",
-            options=[60, 45, 30, 15],
-            index=3,  # 15s seleccionado por defecto
-            horizontal=True,
-            label_visibility="collapsed"
-        )
-
-        # BOTÓN DE TIEMPO
-        col_btn_center = st.columns([1, 2, 1])
-        with col_btn_center[1]:
-            timer_pressed = st.button("⏱️ Empezar TIEMPO de descanso", key="btn_tiempo", use_container_width=True)
-
-        # TEMPORIZADOR
+        # ---------------------------------------------------------------------
+        # ACTIVACIÓN DIRECTA DE DESCANSO (15s) AL PULSAR EN EL BLOQUE / NÚMERO
+        # ---------------------------------------------------------------------
         ph_timer = st.empty()
-        ph_timer.markdown(
-            f'<div class="timer-display">⏱️ {descanso_elegido}s</div>',
-            unsafe_allow_html=True,
+
+        # Botón con apariencia de tarjeta grande interactiva
+        activar_pressed = ph_timer.button(
+            "⏱️ ACTIVA EL DESCANSO\n15s",
+            key="btn_activar_descanso",
+            use_container_width=True,
         )
 
-        if timer_pressed:
-            for t in range(descanso_elegido, -1, -1):
-                color_class = "timer-red" if t <= 10 else "timer-display"
+        if activar_pressed:
+            for t in range(15, -1, -1):
+                color_class = "timer-red" if t <= 5 else "timer-display"
                 ph_timer.markdown(
-                    f'<div class="{color_class}">{t}s</div>',
+                    f'<div class="{color_class}">⏱️ {t}s</div>',
                     unsafe_allow_html=True,
                 )
                 time.sleep(1)
@@ -727,11 +688,10 @@ elif st.session_state.df_rutina is not None and st.session_state.modo_entrenamie
                 st.session_state.paso_actual += 1
                 st.rerun()
 
-        # BARRA DE PROGRESIÓN DINÁMICA Y ATRACTIVA
+        # BARRA DE PROGRESIÓN
         progreso_porcentaje = float((paso_actual + 1) / total_ejercicios)
         porcentaje_num = int(progreso_porcentaje * 100)
 
-        # Selección del emoji según el avance
         if porcentaje_num <= 25:
             emoji_progreso = "🚀"
         elif porcentaje_num <= 50:
@@ -741,7 +701,6 @@ elif st.session_state.df_rutina is not None and st.session_state.modo_entrenamie
         else:
             emoji_progreso = "💪"
 
-        # Mostrar % únicamente si son más de 6 ejercicios
         texto_porcentaje = f'<div class="progress-percentage">{porcentaje_num}% completado</div>' if total_ejercicios > 6 else ""
 
         st.markdown(
