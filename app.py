@@ -106,16 +106,27 @@ st.markdown(
         margin-top: 4px;
     }
 
-    /* Tarjeta de Descripción Técnica / Instrucciones */
+    /* Tarjeta de Descripción Técnica Ubicada Arriba */
     .description-card {
         background-color: #f1f5f9;
         border-left: 4px solid #0284c7;
         border-radius: 8px;
         padding: 12px 16px;
-        margin: 15px 0;
+        margin: 10px 0 15px 0;
         font-size: 0.92rem;
         color: #334155;
         line-height: 1.5;
+    }
+
+    /* Botones de Descanso Grandes (Números) */
+    div[data-testid="stRadio"] > div {
+        justify-content: center;
+        gap: 15px;
+    }
+    div[data-testid="stRadio"] label p {
+        font-size: 1.25rem !important;
+        font-weight: 800 !important;
+        color: #0f172a !important;
     }
 
     /* Botón de Tiempo: Pequeño, Centrado, Fondo VERDE y Letra BLANCA */
@@ -153,7 +164,7 @@ st.markdown(
         text-align: center;
         font-size: 0.95rem;
         color: #475569;
-        margin-bottom: 15px;
+        margin-bottom: 10px;
     }
 
     /* Barra de Progresión Atractiva */
@@ -273,18 +284,14 @@ def obtener_prescripcion(nivel, categoria):
     if nivel == "Básico":
         num_series = 3
         reps_texto = "10-12 reps" if "core" not in cat else "30 seg trabajo"
-        descanso_defecto = 30
     elif nivel == "Intermedio":
         num_series = 4
         reps_texto = "12-15 reps" if "core" not in cat else "45 seg trabajo"
-        descanso_defecto = 30
     else:
         num_series = 4
         reps_texto = "15-20 reps" if "core" not in cat else "60 seg trabajo"
-        descanso_defecto = 15
 
-    series_reps = f"{num_series} series × {reps_texto}"
-    return series_reps, descanso_defecto
+    return f"{num_series} series × {reps_texto}"
 
 
 def generar_link_google_calendar(
@@ -363,7 +370,6 @@ if not st.session_state.modo_entrenamiento:
                 "Objetivo / Dolor", opciones_objetivo
             )
 
-        # Duración elegida por el usuario
         duraciones_opciones = ["20 min", "30 min", "45 min", "60 min"]
         duracion_seleccionada = st.select_slider(
             "⏱️ Tiempo de duración del entrenamiento",
@@ -414,7 +420,6 @@ if not st.session_state.modo_entrenamiento:
                 )
                 df_filtrado = df_ejercicios[df_ejercicios["Nivel"] == nivel_seleccionado]
 
-            # Estimación: ~4 minutos por ejercicio promedio
             ejercicios_objetivo = max(2, round(duracion_fuerza_min / 4))
             cantidad_final = min(ejercicios_objetivo, len(df_filtrado))
             df_rutina = df_filtrado.sample(n=cantidad_final).reset_index(drop=True)
@@ -534,9 +539,7 @@ elif st.session_state.df_rutina is not None and st.session_state.modo_entrenamie
             unsafe_allow_html=True,
         )
 
-        series_reps, descanso_defecto = obtener_prescripcion(
-            nivel_sel, row.get("Tren", "")
-        )
+        series_reps = obtener_prescripcion(nivel_sel, row.get("Tren", ""))
 
         patron = row.get("Patron Movimiento", row.get("Patrón", "-"))
         material = row.get("Material", "-")
@@ -544,6 +547,24 @@ elif st.session_state.df_rutina is not None and st.session_state.modo_entrenamie
 
         st.markdown(
             f'<div class="exercise-details"><b>Patrón:</b> {patron} &nbsp;|&nbsp; <b>Material:</b> {material} &nbsp;|&nbsp; <b>Estructura:</b> {grupo_m}</div>',
+            unsafe_allow_html=True,
+        )
+
+        # DESCRIPCIÓN TÉCNICA UBICADA ENCIMA DE LAS IMÁGENES
+        desc_excel = row.get("Descripcion", row.get("Instrucciones", ""))
+        texto_base = "Mantén la postura alineada, el abdomen activo, realiza un movimiento controlado sin balanceos bruscos y realiza constantemente una respiración fluida y no la bloquees."
+        
+        if desc_excel and desc_excel != "-":
+            texto_descripcion = f"{desc_excel}<br><br>💡 <b>Técnica:</b> {texto_base}"
+        else:
+            texto_descripcion = texto_base
+
+        st.markdown(
+            f"""
+            <div class="description-card">
+                <b>📌 Ejecución paso a paso:</b><br>{texto_descripcion}
+            </div>
+            """,
             unsafe_allow_html=True,
         )
 
@@ -561,23 +582,6 @@ elif st.session_state.df_rutina is not None and st.session_state.modo_entrenamie
                 with cols_img[index]:
                     st.image(url, caption=f"Paso {index + 1}", use_container_width=True)
 
-        # DESCRIPCIÓN TÉCNICA SEGÚN LAS IMÁGENES
-        desc_ejercicio = row.get("Descripcion", row.get("Instrucciones", ""))
-        if not desc_ejercicio or desc_ejercicio == "-":
-            desc_ejercicio = (
-                f"Sigue la secuencia de ejecución indicada en las imágenes superiores de izquierda a derecha. "
-                f"Mantén la postura alineada, el abdomen activo y realiza un movimiento controlado sin balanceos bruscos."
-            )
-
-        st.markdown(
-            f"""
-            <div class="description-card">
-                <b>📌 Ejecución paso a paso:</b><br>{desc_ejercicio}
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-
         # TARJETA DESTACADA "PRESCRIPCIÓN"
         st.markdown(
             f"""
@@ -589,25 +593,23 @@ elif st.session_state.df_rutina is not None and st.session_state.modo_entrenamie
             unsafe_allow_html=True,
         )
 
-        # ELECCIÓN DE TIEMPO DE DESCANSO PARA ESTE EJERCICIO
-        st.markdown("<p style='text-align: center; font-weight: 700; color: #475569;'>Ajusta tu descanso (para intensificar el entrenamiento):</p>", unsafe_allow_html=True)
-        col_d1, col_d2, col_d3 = st.columns([1, 2, 1])
-        with col_d2:
-            descanso_elegido = st.radio(
-                "Selecciona descanso",
-                options=[45, 30, 15],
-                format_func=lambda x: f"⏱️ {x} Segundos",
-                index=1 if descanso_defecto == 30 else (0 if descanso_defecto == 45 else 2),
-                horizontal=True,
-                label_visibility="collapsed"
-            )
+        # ELECCIÓN DE TIEMPO DE DESCANSO CON SOLO LOS NÚMEROS Y 15 SEG POR DEFECTO
+        st.markdown("<p style='text-align: center; font-weight: 700; color: #475569; margin-top: 15px;'>Ajusta los segundos de tu descanso (menos descanso = entreno más duro):</p>", unsafe_allow_html=True)
+        
+        descanso_elegido = st.radio(
+            "Selecciona descanso",
+            options=[60, 45, 30, 15],
+            index=3, # 15s seleccionado por defecto
+            horizontal=True,
+            label_visibility="collapsed"
+        )
 
         # BOTÓN DE TIEMPO
         col_btn_center = st.columns([1, 2, 1])
         with col_btn_center[1]:
             timer_pressed = st.button("⏱️ Empezar TIEMPO de descanso", key="btn_tiempo", use_container_width=True)
 
-        # EMOJI DEL RELOJ Y SEGUNDOS UBICADO JUSTO DEBAJO DEL BOTÓN
+        # MOSTRAR EL TEMPORIZADOR EN PANTALLA
         ph_timer = st.empty()
         ph_timer.markdown(
             f'<div class="timer-display">⏱️ {descanso_elegido}s</div>',
@@ -628,26 +630,46 @@ elif st.session_state.df_rutina is not None and st.session_state.modo_entrenamie
                 unsafe_allow_html=True,
             )
 
+            # PITIDO AUDIBLE COMPATIBLE CON MÓVILES (iOS / ANDROID)
             st.components.v1.html(
                 """
                 <script>
-                function playBeep() {
-                    try {
-                        var ctx = new (window.AudioContext || window.webkitAudioContext)();
-                        var osc = ctx.createOscillator();
-                        var gain = ctx.createGain();
-                        osc.type = 'sine';
-                        osc.frequency.setValueAtTime(880, ctx.currentTime);
-                        gain.gain.setValueAtTime(1, ctx.currentTime);
-                        osc.connect(gain);
-                        gain.connect(ctx.destination);
-                        osc.start();
-                        osc.stop(ctx.currentTime + 0.8);
-                    } catch(e) {
-                        console.log("Audio not allowed");
+                function playMobileBeep() {
+                    var AudioContext = window.AudioContext || window.webkitAudioContext;
+                    if (!AudioContext) return;
+                    
+                    var ctx = new AudioContext();
+                    
+                    // Desbloqueo del contexto de audio en móviles
+                    if (ctx.state === 'suspended') {
+                        ctx.resume();
                     }
+
+                    function emitBeep(delay, duration, freq) {
+                        setTimeout(function() {
+                            var osc = ctx.createOscillator();
+                            var gain = ctx.createGain();
+                            
+                            osc.type = 'sine';
+                            osc.frequency.setValueAtTime(freq, ctx.currentTime);
+                            
+                            gain.gain.setValueAtTime(0.8, ctx.currentTime);
+                            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+                            
+                            osc.connect(gain);
+                            gain.connect(ctx.destination);
+                            
+                            osc.start();
+                            osc.stop(ctx.currentTime + duration);
+                        }, delay);
+                    }
+
+                    // Trío de pitidos estridentes para sonido claro en altavoces móviles
+                    emitBeep(0, 0.2, 880);
+                    emitBeep(250, 0.2, 880);
+                    emitBeep(500, 0.4, 1200);
                 }
-                playBeep();
+                playMobileBeep();
                 </script>
                 """,
                 height=0,
@@ -673,7 +695,7 @@ elif st.session_state.df_rutina is not None and st.session_state.modo_entrenamie
                 st.session_state.paso_actual += 1
                 st.rerun()
 
-        # BARRA DE PROGRESIÓN UBICADA DEBAJO DEL BOTÓN DE SIGUIENTE EJERCICIO
+        # BARRA DE PROGRESIÓN DEBAJO DEL BOTÓN DE NAVEGACIÓN
         progreso_porcentaje = min(float((paso_actual + 1) / total_ejercicios), 1.0)
         st.markdown(
             f"""
