@@ -280,26 +280,27 @@ def generar_link_google_calendar(
 
 
 # Componente HTML del Temporizador Modificado
-def renderizar_temporizador_15s():
+def renderizar_temporizador_15s(paso_ejercicio):
+    # Usamos paso_ejercicio en la key para forzar la re-renderización limpia al cambiar de ejercicio
     st.components.v1.html(
-        """
+        f"""
         <div id="timer-box" onclick="startTimer()" style="
-            background-color: #0f172a;
+            background-color: #f8fafc;
             border-radius: 12px;
-            padding: 15px;
+            padding: 14px;
             text-align: center;
             cursor: pointer;
             user-select: none;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
             margin: 10px 0;
-            border: 2px solid #1d4ed8;
+            border: 2px solid #0284c7;
             transition: all 0.3s ease;
         ">
             <div id="timer-label" style="
-                color: #94a3b8;
+                color: #475569;
                 font-size: 0.85rem;
                 font-weight: 700;
-                letter-spacing: 1px;
+                letter-spacing: 0.5px;
                 text-transform: uppercase;
                 margin-bottom: 4px;
                 font-family: system-ui, -apple-system, sans-serif;
@@ -307,8 +308,8 @@ def renderizar_temporizador_15s():
                 ⏱️ TOCA PARA INICIAR DESCANSO
             </div>
             <div id="timer-display" style="
-                color: #22c55e;
-                font-size: 3rem;
+                color: #16a34a;
+                font-size: 2.8rem;
                 font-weight: 900;
                 font-family: monospace, monospace;
                 line-height: 1;
@@ -322,7 +323,7 @@ def renderizar_temporizador_15s():
             let count = 15;
             let running = false;
 
-            function startTimer() {
+            function startTimer() {{
                 if (running) return;
                 
                 running = true;
@@ -334,37 +335,36 @@ def renderizar_temporizador_15s():
 
                 label.innerText = "PRÓXIMA REPETICIÓN EN...";
                 display.innerText = count + "s";
-                display.style.color = "#22c55e";
-                box.style.borderColor = "#1d4ed8";
+                display.style.color = "#16a34a";
+                box.style.borderColor = "#0284c7";
 
-                interval = setInterval(() => {
+                interval = setInterval(() => {{
                     count--;
                     display.innerText = count + "s";
 
-                    // Al llegar a 10s o menos, cambia a rojo
-                    if (count <= 10) {
-                        display.style.color = "#ef4444";
-                        box.style.borderColor = "#ef4444";
-                    } else {
-                        display.style.color = "#22c55e";
-                        box.style.borderColor = "#1d4ed8";
-                    }
+                    if (count <= 10) {{
+                        display.style.color = "#dc2626";
+                        box.style.borderColor = "#dc2626";
+                    }} else {{
+                        display.style.color = "#16a34a";
+                        box.style.borderColor = "#0284c7";
+                    }}
 
-                    // Al terminar, restablece el estado inicial a 15s y el texto
-                    if (count <= 0) {
+                    if (count <= 0) {{
                         clearInterval(interval);
                         running = false;
                         
                         label.innerText = "⏱️ TOCA PARA INICIAR DESCANSO";
                         display.innerText = "15s";
-                        display.style.color = "#22c55e";
-                        box.style.borderColor = "#1d4ed8";
-                    }
-                }, 1000);
-            }
+                        display.style.color = "#16a34a";
+                        box.style.borderColor = "#0284c7";
+                    }}
+                }}, 1000);
+            }}
         </script>
         """,
         height=110,
+        key=f"timer_widget_{paso_ejercicio}",
     )
 
 
@@ -646,8 +646,8 @@ elif st.session_state.df_rutina is not None and st.session_state.modo_entrenamie
             unsafe_allow_html=True,
         )
 
-        # TEMPORIZADOR INTERACTIVO 15S (MODIFICADO)
-        renderizar_temporizador_15s()
+        # TEMPORIZADOR INTERACTIVO (CON FONDO CLARO Y REINICIO AUTOMÁTICO AL CAMBIAR)
+        renderizar_temporizador_15s(paso_actual)
 
         st.markdown("---")
 
