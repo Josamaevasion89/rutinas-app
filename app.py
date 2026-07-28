@@ -494,11 +494,7 @@ def seleccionar_y_estructurar_rutina(df_candidatos, df_base, cantidad_deseada):
 
 
 def renderizar_temporizador_global():
-    """Renderiza el temporizador del entrenamiento con cambio de color según tiempo transcurrido.
-
-    - Cambia de color de fondo/borde cada 10 minutos.
-    - En los últimos 10 minutos activa fondo amarillo y números rojos.
-    """
+    """Renderiza el temporizador del entrenamiento con cambio de color según tiempo transcurrido."""
     if "inicio_entrenamiento" not in st.session_state or st.session_state.inicio_entrenamiento is None:
         return
 
@@ -521,7 +517,6 @@ def renderizar_temporizador_global():
         text_color = "#dc2626"    # Números rojos
         label_color = "#854d0e"
     else:
-        # Paletas de color dinámicas que varían cada 10 minutos
         bloque_10min = (minutos_transcurridos // 10) % 4
         paletas = [
             {"bg": "#f0f9ff", "border": "#38bdf8", "text": "#0284c7", "label": "#0369a1"},  # Azul
@@ -622,30 +617,76 @@ if not st.session_state.modo_entrenamiento:
             )
 
         st.markdown("<br>", unsafe_allow_html=True)
+
+        # -----------------------------------------------------------------------------
+        # BLOQUE: SELECTOR DE DURACIÓN CON ALTO IMPACTO VISUAL
+        # -----------------------------------------------------------------------------
+
+        # Estilo CSS adicional para el banner
         st.markdown(
-            "<p style='text-align: center; font-weight: 700; color: #475569; margin-bottom: 8px;'>⏱️ Tiempo de duración del entrenamiento</p>",
+            """
+            <style>
+            .time-banner-selected {
+                background: #0f172a;
+                border: 3px solid #22c55e;
+                border-radius: 12px;
+                padding: 12px;
+                text-align: center;
+                margin: 15px 0;
+                box-shadow: 0 0 15px rgba(34, 197, 94, 0.3);
+            }
+            </style>
+        """,
             unsafe_allow_html=True,
         )
 
-        col_t1, col_t2, col_t3, col_t4 = st.columns(4)
+        # Título del selector
+        st.markdown(
+            "<p style='text-align: center; font-weight: 900; color: #0f172a; font-size: 1.1rem; margin-bottom: 8px;'>⏱️ TIEMPO DE DURACIÓN DEL ENTRENAMIENTO</p>",
+            unsafe_allow_html=True,
+        )
 
+        # Renderizado de las 4 columnas de botones
+        col_t1, col_t2, col_t3, col_t4 = st.columns(4)
         opciones_tiempo = ["20 min", "30 min", "45 min", "60 min"]
         cols = [col_t1, col_t2, col_t3, col_t4]
 
         for idx, tiempo_opt in enumerate(opciones_tiempo):
             with cols[idx]:
                 es_activo = st.session_state.duracion_elegida == tiempo_opt
-                # RESALTAR EL BOTÓN SELECCIONADO EN VERDE
                 if es_activo:
+                    # Estilo si está seleccionado (Verde fluorescente, borde grueso, sombra neón y efecto escala)
                     st.markdown(
                         f"""
                         <style>
                         div.stButton > button[key="btn_time_{tiempo_opt}"] {{
                             background-color: #22c55e !important;
-                            color: white !important;
-                            border: 1px solid #16a34a !important;
-                            font-weight: 800 !important;
-                            box-shadow: 0 0 10px rgba(34, 197, 94, 0.4) !important;
+                            color: #ffffff !important;
+                            border: 3px solid #15803d !important;
+                            font-weight: 900 !important;
+                            font-size: 1.2rem !important;
+                            box-shadow: 0 0 14px rgba(34, 197, 94, 0.8) !important;
+                            transform: scale(1.03);
+                        }}
+                        </style>
+                        """,
+                        unsafe_allow_html=True,
+                    )
+                else:
+                    # Estilo si NO está seleccionado (Fondo oscuro, texto naranja)
+                    st.markdown(
+                        f"""
+                        <style>
+                        div.stButton > button[key="btn_time_{tiempo_opt}"] {{
+                            background-color: #0f172a !important;
+                            color: #f97316 !important;
+                            border: 1px solid #334155 !important;
+                            font-weight: 700 !important;
+                            font-size: 1rem !important;
+                        }}
+                        div.stButton > button[key="btn_time_{tiempo_opt}"]:hover {{
+                            background-color: #ea580c !important;
+                            color: #ffffff !important;
                         }}
                         </style>
                         """,
@@ -653,18 +694,18 @@ if not st.session_state.modo_entrenamiento:
                     )
 
                 if st.button(
-                    tiempo_opt,
-                    key=f"btn_time_{tiempo_opt}",
-                    use_container_width=True,
+                    tiempo_opt, key=f"btn_time_{tiempo_opt}", use_container_width=True
                 ):
                     st.session_state.duracion_elegida = tiempo_opt
                     st.rerun()
 
+        # BANNER INFERIOR DE CONFIRMACIÓN VISUAL
         st.markdown(
             f"""
-            <div style="text-align: center; margin-top: 10px; margin-bottom: 10px;">
-                <span style="background-color: #22c55e; color: white; padding: 6px 16px; border-radius: 20px; font-weight: 800; font-size: 0.9rem; box-shadow: 0 2px 4px rgba(34,197,94,0.3);">
-                    SELECCIONADO: {st.session_state.duracion_elegida.upper()}
+            <div class="time-banner-selected">
+                <span style="color: #94a3b8; font-weight: 800; font-size: 0.85rem; letter-spacing: 1px; text-transform: uppercase;">DURACIÓN SELECCIONADA</span><br>
+                <span style="color: #22c55e; font-weight: 900; font-size: 1.8rem; letter-spacing: 0.5px;">
+                    🎯 {st.session_state.duracion_elegida.upper()}
                 </span>
             </div>
             """,
@@ -811,7 +852,6 @@ if not st.session_state.modo_entrenamiento:
         ):
             st.session_state.modo_entrenamiento = True
             st.session_state.paso_actual = 0
-            # Se marca la hora de inicio del temporizador global
             st.session_state.inicio_entrenamiento = datetime.now()
             st.rerun()
 
@@ -931,7 +971,7 @@ elif (
                 st.rerun()
 
         # ---------------------------------------------------------------------
-        # TEMPORIZADOR GLOBAL DE SESIÓN (UBICADO ENTRE NAVEGACIÓN Y BARRA)
+        # TEMPORIZADOR GLOBAL DE SESIÓN
         # ---------------------------------------------------------------------
         renderizar_temporizador_global()
 
@@ -951,7 +991,7 @@ elif (
         st.progress(porcentaje_progreso / 100)
 
     else:
-        # PANTALLA FINAL: BLOQUE DE FUERZA COMPLETADO CON GLOBOS ASCENDENTES
+        # PANTALLA FINAL
         st.balloons()
         st.markdown(
             """
