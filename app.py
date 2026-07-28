@@ -151,21 +151,26 @@ st.markdown(
         border-radius: 10px;
     }
 
-    /* Estilo para convertir botones de Streamlit en la tarjeta del Crono */
+    /* Estilo botón/tarjeta Cronómetro */
     div.stButton > button[key^="btn_card_timer_"] {
         width: 100% !important;
         background-color: #fef08a !important;
         border: 2px solid #facc15 !important;
         border-radius: 14px !important;
-        padding: 12px 10px !important;
+        padding: 16px 12px !important;
         box-shadow: 0 4px 12px rgba(0,0,0,0.08) !important;
-        transition: transform 0.1s ease, box-shadow 0.1s ease !important;
         cursor: pointer !important;
+        color: #854d0e !important;
+        font-size: 1.1rem !important;
+        font-weight: 900 !important;
+        line-height: 1.4 !important;
+        transition: transform 0.1s ease, background-color 0.1s ease !important;
     }
     div.stButton > button[key^="btn_card_timer_"]:hover {
         background-color: #fde047 !important;
         border-color: #eab308 !important;
-        transform: translateY(-1px) !important;
+        color: #713f12 !important;
+        transform: translateY(-2px) !important;
     }
 
     .stButton > button {
@@ -370,91 +375,155 @@ def obtener_prescripcion_profesional(duracion_total_min, nivel, row=None):
     return f"{num_series} series × {reps_texto}"
 
 
-def estructurar_rutina_top_mundial(df):
-    """Estructura la rutina:
+def es_ejercicio_gluteo(row_dict):
+    """Detecta si un ejercicio pertenece al grupo muscular de glúteos."""
+    campos = [
+        str(row_dict.get("Grupo Muscular", "")),
+        str(row_dict.get("Tren", "")),
+        str(row_dict.get("Nombre", "")),
+        str(row_dict.get("Musculo Principal", "")),
+        str(row_dict.get("Musculo", "")),
+    ]
+    texto_total = " ".join([normalizar_texto(c) for c in campos])
+    palabras_gluteo = [
+        "gluteo",
+        "gluteos",
+        "hip thrust",
+        "puente de gluteo",
+        "patada de gluteo",
+        "abduccion",
+    ]
+    return any(p in texto_total for p in palabras_gluteo)
 
-    1. Glúteos SIEMPRE al inicio.
-    2. Abdominales / Core SIEMPRE al final.
-    3. Alternancia de grupos musculares en el bloque intermedio.
+
+def es_ejercicio_abdominal_core(row_dict):
+    """Detecta si un ejercicio pertenece al grupo de abdominales/core."""
+    campos = [
+        str(row_dict.get("Grupo Muscular", "")),
+        str(row_dict.get("Tren", "")),
+        str(row_dict.get("Nombre", "")),
+        str(row_dict.get("Musculo Principal", "")),
+        str(row_dict.get("Musculo", "")),
+    ]
+    texto_total = " ".join([normalizar_texto(c) for c in campos])
+    palabras_core = [
+        "core",
+        "abdominal",
+        "abdominales",
+        "plancha",
+        "crunch",
+        "rueda abdominal",
+        "sit up",
+    ]
+    return any(p in texto_total for p in palabras_core)
+
+
+def seleccionar_y_estructurar_rutina(df_candidatos, df_base, cantidad_deseada):
+    """Garantiza:
+
+    1. Inicio OBLIGATORIO con Glúteos.
+    2. Final OBLIGATORIO del bloque de fuerza con Abdominales/Core.
+    3. Alternancia en ejercicios intermedios.
     """
-    if df.empty:
-        return df
+    todos_registros = df_base.to_dict("records")
+    candidatos_registros = df_candidatos.to_dict("records")
 
-    lista = df.to_dict("records")
+    # 1. Búsqueda prioritaria de un ejercicio de Glúteo
+    gluteos_candidatos = [
+        r for r in candidatos_registros if es_ejercicio_gluteo(r)
+    ]
+    if not gluteos_candidatos:
+        gluteos_candidatos = [
+            r for r in todos_registros if es_ejercicio_gluteo(r)
+        ]
 
-    ejercicio_gluteo = None
+    if gluteos_candidatos:
+        ej_gluteo = (
+            pd.DataFrame(gluteos_candidatos).sample(n=1).to_dict("records")[0]
+        )
+    else:
+        ej_gluteo = (
+            candidatos_registros[0]
+            if candidatos_registros
+            else todos_registros[0]
+        )
+
+    # 2. Búsqueda prioritaria de ejercicios de Core/Abdominales
+    core_candidatos = [
+        r
+        for r in candidatos_registros
+        if es_ejercicio_abdominal_core(r) and r != ej_gluteo
+    ]
+    if not core_candidatos:
+        core_candidatos = [
+            r
+            for r in todos_registros
+            if es_ejercicio_abdominal_core(r) and r != ej_gluteo
+        ]
+
+    cant_core = 1 if cantidad_deseada <= 4 else 2
     ejercicios_core = []
-    ejercicios_intermedios = []
-
-    # Clasificación
-    for item in lista:
-        nombre = normalizar_texto(str(item.get("Nombre", "")))
-        grupo = normalizar_texto(
-            str(item.get("Grupo Muscular", item.get("Tren", "")))
+    if core_candidatos:
+        cant_tomar = min(cant_core, len(core_candidatos))
+        ejercicios_core = (
+            pd.DataFrame(core_candidatos)
+            .sample(n=cant_tomar)
+            .to_dict("records")
         )
 
-        es_gluteo = "gluteo" in grupo or "gluteo" in nombre or "hip thrust" in nombre
-        es_core = (
-            "core" in grupo
-            or "abdominal" in grupo
-            or "core" in nombre
-            or "plancha" in nombre
-            or "crunch" in nombre
+    # 3. Ejercicios intermedios
+    usados = [ej_gluteo] + ejercicios_core
+    cuantos_intermedios = max(0, cantidad_deseada - len(usados))
+
+    resto_candidatos = [r for r in candidatos_registros if r not in usados]
+    if len(resto_candidatos) < cuantos_intermedios:
+        resto_base = [r for r in todos_registros if r not in usados]
+        resto_candidatos.extend(
+            [r for r in resto_base if r not in resto_candidatos]
         )
 
-        if es_gluteo and ejercicio_gluteo is None:
-            ejercicio_gluteo = item
-        elif es_core:
-            ejercicios_core.append(item)
-        else:
-            ejercicios_intermedios.append(item)
+    intermedios = []
+    if resto_candidatos and cuantos_intermedios > 0:
+        cant_interm = min(cuantos_intermedios, len(resto_candidatos))
+        intermedios = (
+            pd.DataFrame(resto_candidatos)
+            .sample(n=cant_interm)
+            .to_dict("records")
+        )
 
-    # Si no había un ejercicio explícito de glúteo, se mantiene el primero como inicio
-    rutina_ordenada = []
-
-    if ejercicio_gluteo:
-        rutina_ordenada.append(ejercicio_gluteo)
-    elif ejercicios_intermedios:
-        rutina_ordenada.append(ejercicios_intermedios.pop(0))
-
-    # Alternar el bloque intermedio
-    while ejercicios_intermedios:
-        if not rutina_ordenada:
-            rutina_ordenada.append(ejercicios_intermedios.pop(0))
+    # Alternar grupo muscular en intermedios
+    intermedios_ordenados = []
+    while intermedios:
+        if not intermedios_ordenados:
+            intermedios_ordenados.append(intermedios.pop(0))
             continue
 
-        ultimo_grupo = normalizar_texto(
-            str(
-                rutina_ordenada[-1].get(
-                    "Grupo Muscular", rutina_ordenada[-1].get("Tren", "")
-                )
-            )
+        ult_grupo = normalizar_texto(
+            str(intermedios_ordenados[-1].get("Grupo Muscular", ""))
         )
         cand_idx = -1
-
-        for idx, item in enumerate(ejercicios_intermedios):
-            grp_act = normalizar_texto(
-                str(item.get("Grupo Muscular", item.get("Tren", "")))
-            )
-            if grp_act != ultimo_grupo:
+        for idx, item in enumerate(intermedios):
+            if (
+                normalizar_texto(str(item.get("Grupo Muscular", "")))
+                != ult_grupo
+            ):
                 cand_idx = idx
                 break
 
         if cand_idx != -1:
-            rutina_ordenada.append(ejercicios_intermedios.pop(cand_idx))
+            intermedios_ordenados.append(intermedios.pop(cand_idx))
         else:
-            rutina_ordenada.append(ejercicios_intermedios.pop(0))
+            intermedios_ordenados.append(intermedios.pop(0))
 
-    # Añadir Abdominales / Core SIEMPRE al final
-    rutina_ordenada.extend(ejercicios_core)
-
-    return pd.DataFrame(rutina_ordenada)
+    # Estructura Final Garantizada: [GLÚTEO] + [INTERMEDIOS] + [ABDOMINALES]
+    rutina_final = [ej_gluteo] + intermedios_ordenados + ejercicios_core
+    return pd.DataFrame(rutina_final)
 
 
 def renderizar_temporizador_15s(paso_id):
-    """La propia tarjeta/bloque actúa como botón interactivo.
+    """Crono interactivo unificado sin tags HTML visibles en la etiqueta del botón.
 
-    Reinicio tras GOOO! prolongado a 3.5 segundos.
+    Conserva la pausa de 3.5s tras el final.
     """
     key_timer_activo = f"timer_activo_{paso_id}"
     key_timer_inicio = f"timer_inicio_{paso_id}"
@@ -465,16 +534,9 @@ def renderizar_temporizador_15s(paso_id):
     duracion = 15
 
     if not st.session_state[key_timer_activo]:
-        # Tarjeta que actúa como Botón
-        html_card_btn = """
-        <div style="text-align: center; line-height: 1.2;">
-            <div style="color: #854d0e; font-size: 0.85rem; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase;">⏱️ DESCANSO ENTRE SERIES</div>
-            <div style="color: #16a34a; font-size: 2.6rem; font-weight: 900; font-family: monospace; margin-top: 2px;">15s</div>
-            <div style="color: #a16207; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; margin-top: 2px;">👈 TOCA AQUÍ PARA INICIAR</div>
-        </div>
-        """
+        texto_boton = "⏱️ DESCANSO ENTRE SERIES: 15s\n👇 (Toca aquí para iniciar cuenta atrás)"
         if st.button(
-            html_card_btn,
+            texto_boton,
             key=f"btn_card_timer_{paso_id}",
             use_container_width=True,
         ):
@@ -502,7 +564,6 @@ def renderizar_temporizador_15s(paso_id):
             time.sleep(1)
             st.rerun()
         else:
-            # Cartel de finalización activo durante 3.5 segundos
             st.markdown(
                 """
                 <div style="background-color: #22c55e; border-radius: 14px; padding: 16px; text-align: center; border: 2px solid #16a34a; box-shadow: 0 4px 12px rgba(0,0,0,0.12); margin-bottom: 10px;">
@@ -627,7 +688,6 @@ if not st.session_state.modo_entrenamiento:
                     st.session_state.duracion_elegida = tiempo_opt
                     st.rerun()
 
-        # Badge Azul
         st.markdown(
             f"""
             <div style="text-align: center; margin-top: 10px; margin-bottom: 10px;">
@@ -711,17 +771,11 @@ if not st.session_state.modo_entrenamiento:
                 df_filtrado = df_ejercicios.copy()
 
             ejercicios_objetivo = max(2, int(round(duracion_fuerza_min / 4.5)))
-            cantidad_final = min(ejercicios_objetivo, len(df_filtrado))
 
-            if cantidad_final > 0:
-                df_rutina = df_filtrado.sample(n=cantidad_final).reset_index(
-                    drop=True
-                )
-            else:
-                df_rutina = df_ejercicios.head(2).reset_index(drop=True)
-
-            # Algoritmo de estructuración biomecánica
-            df_rutina = estructurar_rutina_top_mundial(df_rutina)
+            # Algoritmo de estructuración biomecánica garantizado
+            df_rutina = seleccionar_y_estructurar_rutina(
+                df_filtrado, df_ejercicios, ejercicios_objetivo
+            )
 
             st.session_state.df_rutina = df_rutina
             st.session_state.tiempo_estimado = duracion_fuerza_min
@@ -884,7 +938,7 @@ elif (
             unsafe_allow_html=True,
         )
 
-        # Crono interactivo donde la tarjeta completa funciona como botón de inicio
+        # Crono interactivo
         renderizar_temporizador_15s(paso_actual)
 
         st.markdown("---")
