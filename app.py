@@ -151,7 +151,23 @@ st.markdown(
         border-radius: 10px;
     }
 
-    /* Estilos Generales para Botones */
+    /* Estilo para convertir botones de Streamlit en la tarjeta del Crono */
+    div.stButton > button[key^="btn_card_timer_"] {
+        width: 100% !important;
+        background-color: #fef08a !important;
+        border: 2px solid #facc15 !important;
+        border-radius: 14px !important;
+        padding: 12px 10px !important;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08) !important;
+        transition: transform 0.1s ease, box-shadow 0.1s ease !important;
+        cursor: pointer !important;
+    }
+    div.stButton > button[key^="btn_card_timer_"]:hover {
+        background-color: #fde047 !important;
+        border-color: #eab308 !important;
+        transform: translateY(-1px) !important;
+    }
+
     .stButton > button {
         border-radius: 10px !important;
         font-weight: 600 !important;
@@ -289,13 +305,11 @@ def es_ejercicio_unilateral(row):
 
 
 def calcular_series_fisiologicas(duracion_total_min, nivel, row):
-    """Cálculo avanzado de series (2, 3 o 4) basado en la demanda metabólica y tiempo disponible."""
     nombre_norm = normalizar_texto(str(row.get("Nombre", "")))
     cat_norm = normalizar_texto(
         str(row.get("Grupo Muscular", row.get("Tren", "")))
     )
 
-    # Ejercicios pesados o de demanda neuro-muscular alta
     es_multiarticular_pesado = any(
         k in nombre_norm
         for k in [
@@ -313,7 +327,6 @@ def calcular_series_fisiologicas(duracion_total_min, nivel, row):
         for k in ["core", "plancha", "abdominal", "movilidad", "estiramiento"]
     )
 
-    # Matriz Fisiológica de Series
     if duracion_total_min <= 20:
         if es_core_movilidad:
             return 2
@@ -357,46 +370,92 @@ def obtener_prescripcion_profesional(duracion_total_min, nivel, row=None):
     return f"{num_series} series × {reps_texto}"
 
 
-def alternar_grupos_musculares(df):
-    """Algoritmo de optimización que impide tener 2 ejercicios consecutivos del mismo grupo muscular."""
-    if len(df) <= 2:
+def estructurar_rutina_top_mundial(df):
+    """Estructura la rutina:
+
+    1. Glúteos SIEMPRE al inicio.
+    2. Abdominales / Core SIEMPRE al final.
+    3. Alternancia de grupos musculares en el bloque intermedio.
+    """
+    if df.empty:
         return df
 
-    df_restante = df.copy().to_dict("records")
-    df_ordenado = []
+    lista = df.to_dict("records")
 
-    # Tomar el primero
-    df_ordenado.append(df_restante.pop(0))
+    ejercicio_gluteo = None
+    ejercicios_core = []
+    ejercicios_intermedios = []
 
-    while df_restante:
+    # Clasificación
+    for item in lista:
+        nombre = normalizar_texto(str(item.get("Nombre", "")))
+        grupo = normalizar_texto(
+            str(item.get("Grupo Muscular", item.get("Tren", "")))
+        )
+
+        es_gluteo = "gluteo" in grupo or "gluteo" in nombre or "hip thrust" in nombre
+        es_core = (
+            "core" in grupo
+            or "abdominal" in grupo
+            or "core" in nombre
+            or "plancha" in nombre
+            or "crunch" in nombre
+        )
+
+        if es_gluteo and ejercicio_gluteo is None:
+            ejercicio_gluteo = item
+        elif es_core:
+            ejercicios_core.append(item)
+        else:
+            ejercicios_intermedios.append(item)
+
+    # Si no había un ejercicio explícito de glúteo, se mantiene el primero como inicio
+    rutina_ordenada = []
+
+    if ejercicio_gluteo:
+        rutina_ordenada.append(ejercicio_gluteo)
+    elif ejercicios_intermedios:
+        rutina_ordenada.append(ejercicios_intermedios.pop(0))
+
+    # Alternar el bloque intermedio
+    while ejercicios_intermedios:
+        if not rutina_ordenada:
+            rutina_ordenada.append(ejercicios_intermedios.pop(0))
+            continue
+
         ultimo_grupo = normalizar_texto(
             str(
-                df_ordenado[-1].get(
-                    "Grupo Muscular", df_ordenado[-1].get("Tren", "")
+                rutina_ordenada[-1].get(
+                    "Grupo Muscular", rutina_ordenada[-1].get("Tren", "")
                 )
             )
         )
-        candidato_idx = -1
+        cand_idx = -1
 
-        for i, item in enumerate(df_restante):
-            grupo_actual = normalizar_texto(
+        for idx, item in enumerate(ejercicios_intermedios):
+            grp_act = normalizar_texto(
                 str(item.get("Grupo Muscular", item.get("Tren", "")))
             )
-            if grupo_actual != ultimo_grupo:
-                candidato_idx = i
+            if grp_act != ultimo_grupo:
+                cand_idx = idx
                 break
 
-        if candidato_idx != -1:
-            df_ordenado.append(df_restante.pop(candidato_idx))
+        if cand_idx != -1:
+            rutina_ordenada.append(ejercicios_intermedios.pop(cand_idx))
         else:
-            # Si no hay alternancia posible, se añade el siguiente disponible
-            df_ordenado.append(df_restante.pop(0))
+            rutina_ordenada.append(ejercicios_intermedios.pop(0))
 
-    return pd.DataFrame(df_ordenado)
+    # Añadir Abdominales / Core SIEMPRE al final
+    rutina_ordenada.extend(ejercicios_core)
+
+    return pd.DataFrame(rutina_ordenada)
 
 
 def renderizar_temporizador_15s(paso_id):
-    """Temporizador con reset automático a opción inicial tras mostrar GOOO!."""
+    """La propia tarjeta/bloque actúa como botón interactivo.
+
+    Reinicio tras GOOO! prolongado a 3.5 segundos.
+    """
     key_timer_activo = f"timer_activo_{paso_id}"
     key_timer_inicio = f"timer_inicio_{paso_id}"
 
@@ -406,19 +465,17 @@ def renderizar_temporizador_15s(paso_id):
     duracion = 15
 
     if not st.session_state[key_timer_activo]:
-        # Estado inicial / Inactivo
-        st.markdown(
-            """
-            <div style="background-color: #fef08a; border-radius: 12px; padding: 14px; text-align: center; border: 2px solid #facc15; box-shadow: 0 4px 12px rgba(0,0,0,0.08); margin-bottom: 10px;">
-                <div style="color: #854d0e; font-size: 0.85rem; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase;">⏱️ DESCANSO ENTRE SERIES</div>
-                <div style="color: #16a34a; font-size: 2.8rem; font-weight: 900; font-family: monospace; line-height: 1;">15s</div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
+        # Tarjeta que actúa como Botón
+        html_card_btn = """
+        <div style="text-align: center; line-height: 1.2;">
+            <div style="color: #854d0e; font-size: 0.85rem; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase;">⏱️ DESCANSO ENTRE SERIES</div>
+            <div style="color: #16a34a; font-size: 2.6rem; font-weight: 900; font-family: monospace; margin-top: 2px;">15s</div>
+            <div style="color: #a16207; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; margin-top: 2px;">👈 TOCA AQUÍ PARA INICIAR</div>
+        </div>
+        """
         if st.button(
-            "⏱️ Iniciar Descanso (15s)",
-            key=f"btn_timer_{paso_id}",
+            html_card_btn,
+            key=f"btn_card_timer_{paso_id}",
             use_container_width=True,
         ):
             st.session_state[key_timer_activo] = True
@@ -435,7 +492,7 @@ def renderizar_temporizador_15s(paso_id):
             color_numero = "#16a34a" if tiempo_restante > 10 else "#dc2626"
             st.markdown(
                 f"""
-                <div style="background-color: #fef08a; border-radius: 12px; padding: 14px; text-align: center; border: 2px solid #facc15; box-shadow: 0 4px 12px rgba(0,0,0,0.08); margin-bottom: 10px;">
+                <div style="background-color: #fef08a; border-radius: 14px; padding: 14px; text-align: center; border: 2px solid #facc15; box-shadow: 0 4px 12px rgba(0,0,0,0.08); margin-bottom: 10px;">
                     <div style="color: #854d0e; font-size: 0.85rem; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase;">PRÓXIMA REPETICIÓN EN...</div>
                     <div style="color: {color_numero}; font-size: 2.8rem; font-weight: 900; font-family: monospace; line-height: 1;">{tiempo_restante}s</div>
                 </div>
@@ -445,17 +502,17 @@ def renderizar_temporizador_15s(paso_id):
             time.sleep(1)
             st.rerun()
         else:
-            # Mostrar GOOO! brevemente y restablecer automáticamente a la pantalla inicial del descanso
+            # Cartel de finalización activo durante 3.5 segundos
             st.markdown(
                 """
-                <div style="background-color: #22c55e; border-radius: 12px; padding: 14px; text-align: center; border: 2px solid #16a34a; box-shadow: 0 4px 12px rgba(0,0,0,0.12); margin-bottom: 10px;">
+                <div style="background-color: #22c55e; border-radius: 14px; padding: 16px; text-align: center; border: 2px solid #16a34a; box-shadow: 0 4px 12px rgba(0,0,0,0.12); margin-bottom: 10px;">
                     <div style="color: #ffffff; font-size: 0.85rem; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase;">¡TIEMPO AGOTADO!</div>
-                    <div style="color: #ffffff; font-size: 2.5rem; font-weight: 900; font-family: monospace; line-height: 1;">GOOOO! 🚀</div>
+                    <div style="color: #ffffff; font-size: 2.6rem; font-weight: 900; font-family: monospace; line-height: 1;">GOOOO! 🚀</div>
                 </div>
                 """,
                 unsafe_allow_html=True,
             )
-            time.sleep(1.5)
+            time.sleep(3.5)
             st.session_state[key_timer_activo] = False
             st.rerun()
 
@@ -570,7 +627,7 @@ if not st.session_state.modo_entrenamiento:
                     st.session_state.duracion_elegida = tiempo_opt
                     st.rerun()
 
-        # Badge Azul Independiente
+        # Badge Azul
         st.markdown(
             f"""
             <div style="text-align: center; margin-top: 10px; margin-bottom: 10px;">
@@ -653,7 +710,6 @@ if not st.session_state.modo_entrenamiento:
                 )
                 df_filtrado = df_ejercicios.copy()
 
-            # Cálculo óptimo de número de ejercicios según volumen útil
             ejercicios_objetivo = max(2, int(round(duracion_fuerza_min / 4.5)))
             cantidad_final = min(ejercicios_objetivo, len(df_filtrado))
 
@@ -664,9 +720,8 @@ if not st.session_state.modo_entrenamiento:
             else:
                 df_rutina = df_ejercicios.head(2).reset_index(drop=True)
 
-            # Regla Top Mundial: Alternancia de grupos musculares excepto si el usuario filtró explícitamente uno solo
-            if tren_seleccionado == OPCION_BLANCO:
-                df_rutina = alternar_grupos_musculares(df_rutina)
+            # Algoritmo de estructuración biomecánica
+            df_rutina = estructurar_rutina_top_mundial(df_rutina)
 
             st.session_state.df_rutina = df_rutina
             st.session_state.tiempo_estimado = duracion_fuerza_min
@@ -754,7 +809,6 @@ elif (
             unsafe_allow_html=True,
         )
 
-        # Cálculo dinámico Top Mundial de series/reps
         duracion_min_total = int(
             str(st.session_state.duracion_elegida).split()[0]
         )
@@ -830,7 +884,7 @@ elif (
             unsafe_allow_html=True,
         )
 
-        # Componente de temporizador con reseteo automático tras GOOO!
+        # Crono interactivo donde la tarjeta completa funciona como botón de inicio
         renderizar_temporizador_15s(paso_actual)
 
         st.markdown("---")
