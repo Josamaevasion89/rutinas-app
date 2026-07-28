@@ -36,7 +36,7 @@ st.markdown(
 
     .exercise-title {
         text-align: center;
-        font-size: 1.5rem;
+        font-size: 1.6rem;
         font-weight: 800;
         color: #0f172a;
         margin-top: 10px;
@@ -137,6 +137,17 @@ st.markdown(
     .stButton > button {
         border-radius: 10px !important;
         font-weight: 600 !important;
+    }
+
+    /* RESALTE ULTRA VISIBLE PARA SELECCIÓN DE TIEMPO */
+    .time-banner-selected {
+        background: #0f172a;
+        border: 3px solid #22c55e;
+        border-radius: 12px;
+        padding: 12px;
+        text-align: center;
+        margin: 15px 0;
+        box-shadow: 0 0 15px rgba(34, 197, 94, 0.3);
     }
     </style>
 """,
@@ -476,7 +487,6 @@ def obtener_rutina_estiramientos(df_base, cantidad=4):
 def renderizar_temporizador_dinamico(
     duracion_min_total, inicio_time, contenedor
 ):
-    """Renderiza el temporizador en tiempo real calculando los segundos transcurridos."""
     duracion_segundos_total = duracion_min_total * 60
     tiempo_transcurrido_seg = (datetime.now() - inicio_time).total_seconds()
     tiempo_restante_seg = max(
@@ -488,10 +498,10 @@ def renderizar_temporizador_dinamico(
     formato_tiempo = f"{minutos_restantes:02d}:{segundos_restantes:02d}"
     minutos_transcurridos = int(tiempo_transcurrido_seg // 60)
 
-    if tiempo_restante_seg <= 600:  # Últimos 10 minutos
-        bg_color = "#fef08a"  # Fondo amarillo
+    if tiempo_restante_seg <= 600:
+        bg_color = "#fef08a"
         border_color = "#eab308"
-        text_color = "#dc2626"  # Números rojos
+        text_color = "#dc2626"
         label_color = "#854d0e"
     else:
         bloque_10min = (minutos_transcurridos // 10) % 4
@@ -501,25 +511,25 @@ def renderizar_temporizador_dinamico(
                 "border": "#38bdf8",
                 "text": "#0284c7",
                 "label": "#0369a1",
-            },  # Azul
+            },
             {
                 "bg": "#f0fdf4",
                 "border": "#4ade80",
                 "text": "#16a34a",
                 "label": "#15803d",
-            },  # Verde
+            },
             {
                 "bg": "#faf5ff",
                 "border": "#c084fc",
                 "text": "#9333ea",
                 "label": "#6b21a8",
-            },  # Púrpura
+            },
             {
                 "bg": "#fff7ed",
                 "border": "#fb923c",
                 "text": "#ea580c",
                 "label": "#c2410c",
-            },  # Naranja
+            },
         ]
         p = paletas[bloque_10min]
         bg_color, border_color, text_color, label_color = (
@@ -626,7 +636,7 @@ if (
 
         st.markdown("<br>", unsafe_allow_html=True)
         st.markdown(
-            "<p style='text-align: center; font-weight: 800; color: #0f172a; margin-bottom: 8px;'>⏱️ TIEMPO DE DURACIÓN DEL ENTRENAMIENTO</p>",
+            "<p style='text-align: center; font-weight: 900; color: #0f172a; font-size: 1.1rem; margin-bottom: 8px;'>⏱️ TIEMPO DE DURACIÓN DEL ENTRENAMIENTO</p>",
             unsafe_allow_html=True,
         )
 
@@ -634,7 +644,7 @@ if (
         opciones_tiempo = ["20 min", "30 min", "45 min", "60 min"]
         cols = [col_t1, col_t2, col_t3, col_t4]
 
-        # ESTILOS REFORZADOS EN VERDE, NARANJA Y NEGRO PARA LOS BOTONES DE TIEMPO
+        # BOTONES CON VISIBILIDAD REFORZADA
         for idx, tiempo_opt in enumerate(opciones_tiempo):
             with cols[idx]:
                 es_activo = st.session_state.duracion_elegida == tiempo_opt
@@ -643,12 +653,13 @@ if (
                         f"""
                         <style>
                         div.stButton > button[key="btn_time_{tiempo_opt}"] {{
-                            background-color: #16a34a !important;
+                            background-color: #22c55e !important;
                             color: #ffffff !important;
-                            border: 2px solid #15803d !important;
+                            border: 3px solid #15803d !important;
                             font-weight: 900 !important;
-                            font-size: 1.05rem !important;
-                            box-shadow: 0 4px 10px rgba(22, 163, 74, 0.4) !important;
+                            font-size: 1.2rem !important;
+                            box-shadow: 0 0 14px rgba(34, 197, 94, 0.8) !important;
+                            transform: scale(1.03);
                         }}
                         </style>
                         """,
@@ -663,6 +674,7 @@ if (
                             color: #f97316 !important;
                             border: 1px solid #334155 !important;
                             font-weight: 700 !important;
+                            font-size: 1rem !important;
                         }}
                         div.stButton > button[key="btn_time_{tiempo_opt}"]:hover {{
                             background-color: #ea580c !important;
@@ -681,11 +693,13 @@ if (
                     st.session_state.duracion_elegida = tiempo_opt
                     st.rerun()
 
+        # BANNER DE TIEMPO ULTRA VISIBLE
         st.markdown(
             f"""
-            <div style="text-align: center; margin-top: 12px; margin-bottom: 10px;">
-                <span style="background-color: #16a34a; color: white; padding: 6px 18px; border-radius: 20px; font-weight: 800; font-size: 0.95rem; box-shadow: 0 2px 5px rgba(0,0,0,0.15);">
-                    SELECCIONADO: {st.session_state.duracion_elegida.upper()}
+            <div class="time-banner-selected">
+                <span style="color: #94a3b8; font-weight: 800; font-size: 0.85rem; letter-spacing: 1px; text-transform: uppercase;">DURACIÓN SELECCIONADA</span><br>
+                <span style="color: #22c55e; font-weight: 900; font-size: 1.8rem; letter-spacing: 0.5px;">
+                    🎯 {st.session_state.duracion_elegida.upper()}
                 </span>
             </div>
             """,
@@ -831,7 +845,7 @@ if (
             st.rerun()
 
 # -----------------------------------------------------------------------------
-# 5. MODO ENTRENAMIENTO GUIADO (TEMPORIZADOR DINÁMICO SEGUNDO A SEGUNDO)
+# 5. MODO ENTRENAMIENTO GUIADO
 # -----------------------------------------------------------------------------
 
 elif (
@@ -897,6 +911,8 @@ elif (
             unsafe_allow_html=True,
         )
 
+        # CORRECCIÓN DE IMÁGENES PENDIENTES DEL EJERCICIO ANTERIOR:
+        # Se envuelven en un st.container() dedicado y se aplica un `key` dinámico por paso.
         columnas_fotos = ["Imagen_1", "Imagen_2", "Imagen_3", "Imagen_4"]
         urls_validas = [
             str(row[col])
@@ -906,13 +922,17 @@ elif (
             and str(row[col]).strip() not in ["-", ""]
         ]
 
-        if urls_validas:
-            cols_img = st.columns(len(urls_validas))
-            for index, url in enumerate(urls_validas):
-                with cols_img[index]:
-                    st.image(
-                        url, caption=f"Paso {index + 1}", use_container_width=True
-                    )
+        with st.container():
+            if urls_validas:
+                cols_img = st.columns(len(urls_validas))
+                for index, url in enumerate(urls_validas):
+                    with cols_img[index]:
+                        st.image(
+                            url,
+                            caption=f"Paso {index + 1}",
+                            use_container_width=True,
+                            key=f"img_{paso_actual}_{index}",
+                        )
 
         st.markdown(
             f"""
@@ -929,20 +949,25 @@ elif (
         col_nav1, col_nav2 = st.columns([1, 1])
         with col_nav1:
             if paso_actual > 0:
-                if st.button("⬅️ Anterior", use_container_width=True):
+                if st.button(
+                    "⬅️ Anterior",
+                    key=f"btn_prev_{paso_actual}",
+                    use_container_width=True,
+                ):
                     st.session_state.paso_actual -= 1
                     st.rerun()
 
         with col_nav2:
             if st.button(
                 "✅ ➔ Siguiente ejercicio",
+                key=f"btn_next_{paso_actual}",
                 type="primary",
                 use_container_width=True,
             ):
                 st.session_state.paso_actual += 1
                 st.rerun()
 
-        # TEMPORIZADOR DINÁMICO UBICADO ENTRE NAVEGACIÓN Y BARRA
+        # TEMPORIZADOR DINÁMICO
         timer_placeholder = st.empty()
         renderizar_temporizador_dinamico(
             duracion_min_total,
@@ -965,12 +990,12 @@ elif (
         )
         st.progress(porcentaje_progreso / 100)
 
-        # Refresco dinámico cada segundo para actualizar la hora visible
+        # Refresco cada segundo
         time.sleep(1)
         st.rerun()
 
     else:
-        # PANTALLA FINAL: GLOBOS, BLOQUE INFORMATIVO DE ESTIRAMIENTO Y BOTÓN GENERADOR
+        # PANTALLA FINAL
         st.balloons()
         st.markdown(
             """
@@ -982,7 +1007,6 @@ elif (
             unsafe_allow_html=True,
         )
 
-        # BLOQUE EXPLICATIVO IMPORTANCIA DE ESTIRAMIENTOS
         st.markdown(
             """
             <div style="background-color: #f0fdf4; border-left: 5px solid #22c55e; border-radius: 10px; padding: 16px; margin: 15px 0;">
@@ -1038,7 +1062,6 @@ elif st.session_state.modo_estiramientos:
         unsafe_allow_html=True,
     )
 
-    # Temporizador de estiramientos (10 min)
     timer_estiramiento = st.empty()
     renderizar_temporizador_dinamico(
         10, st.session_state.inicio_estiramientos, timer_estiramiento
@@ -1066,7 +1089,11 @@ elif st.session_state.modo_estiramientos:
             and str(row[c]).strip() not in ["-", ""]
         ]
         if img_col:
-            st.image(img_col[0], use_container_width=True)
+            st.image(
+                img_col[0],
+                use_container_width=True,
+                key=f"img_est_{idx}",
+            )
 
         st.markdown("---")
 
