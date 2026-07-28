@@ -1,5 +1,4 @@
 import textwrap
-import time
 import unicodedata
 from datetime import datetime
 
@@ -216,7 +215,6 @@ with col_usr2:
         st.session_state.paso_actual = 0
         st.session_state.df_rutina = None
         st.session_state.modo_entrenamiento = False
-        st.session_state.inicio_entrenamiento = None
         st.rerun()
 
 
@@ -355,7 +353,6 @@ def obtener_prescripcion_profesional(duracion_total_min, nivel, row=None):
 
 
 def es_ejercicio_gluteo(row_dict):
-    """Busca coincidencia con glúteo en todos los valores de la fila."""
     texto_total = " ".join([normalizar_texto(str(v)) for v in row_dict.values()])
     palabras_gluteo = [
         "gluteo",
@@ -471,57 +468,8 @@ def seleccionar_y_estructurar_rutina(df_candidatos, df_base, cantidad_deseada):
         else:
             intermedios_ordenados.append(intermedios.pop(0))
 
-    # Rutina estructurada: Glúteo primero siempre, luego intermedias, luego Core
     rutina_final = [ej_gluteo] + intermedios_ordenados + ejercicios_core
     return pd.DataFrame(rutina_final)
-
-
-def renderizar_temporizador_global():
-    """Renderiza el temporizador del entrenamiento con cambio de color según tiempo transcurrido."""
-    if "inicio_entrenamiento" not in st.session_state or st.session_state.inicio_entrenamiento is None:
-        return
-
-    duracion_min_total = int(str(st.session_state.duracion_elegida).split()[0])
-    duracion_segundos_total = duracion_min_total * 60
-
-    tiempo_transcurrido_seg = (datetime.now() - st.session_state.inicio_entrenamiento).total_seconds()
-    tiempo_restante_seg = max(0, int(duracion_segundos_total - tiempo_transcurrido_seg))
-
-    minutos_restantes = tiempo_restante_seg // 60
-    segundos_restantes = tiempo_restante_seg % 60
-    formato_tiempo = f"{minutos_restantes:02d}:{segundos_restantes:02d}"
-
-    minutos_transcurridos = int(tiempo_transcurrido_seg // 60)
-
-    # Estilos según el tiempo
-    if tiempo_restante_seg <= 600:  # Últimos 10 minutos
-        bg_color = "#fef08a"      # Fondo amarillo
-        border_color = "#facc15"  # Borde amarillo fuerte
-        text_color = "#dc2626"    # Números rojos
-        label_color = "#854d0e"
-    else:
-        bloque_10min = (minutos_transcurridos // 10) % 4
-        paletas = [
-            {"bg": "#f0f9ff", "border": "#38bdf8", "text": "#0284c7", "label": "#0369a1"},  # Azul
-            {"bg": "#f0fdf4", "border": "#4ade80", "text": "#16a34a", "label": "#15803d"},  # Verde
-            {"bg": "#faf5ff", "border": "#c084fc", "text": "#9333ea", "label": "#6b21a8"},  # Púrpura
-            {"bg": "#fff7ed", "border": "#fb923c", "text": "#ea580c", "label": "#c2410c"},  # Naranja
-        ]
-        p = paletas[bloque_10min]
-        bg_color = p["bg"]
-        border_color = p["border"]
-        text_color = p["text"]
-        label_color = p["label"]
-
-    st.markdown(
-        textwrap.dedent(f"""
-        <div style="background-color: {bg_color}; border-radius: 14px; padding: 12px; text-align: center; border: 2px solid {border_color}; box-shadow: 0 4px 12px rgba(0,0,0,0.06); margin: 15px 0;">
-            <div style="color: {label_color}; font-size: 0.85rem; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase;">⏱️ TIEMPO RESTANTE SESIÓN ({duracion_min_total} MIN)</div>
-            <div style="color: {text_color}; font-size: 2.6rem; font-weight: 900; font-family: monospace; line-height: 1; margin-top: 4px;">{formato_tiempo}</div>
-        </div>
-        """),
-        unsafe_allow_html=True,
-    )
 
 
 # Variables de sesión iniciales
@@ -537,8 +485,6 @@ if "modo_entrenamiento" not in st.session_state:
     st.session_state.modo_entrenamiento = False
 if "duracion_elegida" not in st.session_state:
     st.session_state.duracion_elegida = "30 min"
-if "inicio_entrenamiento" not in st.session_state:
-    st.session_state.inicio_entrenamiento = None
 
 # -----------------------------------------------------------------------------
 # 4. CONFIGURADOR DE RUTINA Y CABECERA
@@ -808,7 +754,6 @@ if not st.session_state.modo_entrenamiento:
         ):
             st.session_state.modo_entrenamiento = True
             st.session_state.paso_actual = 0
-            st.session_state.inicio_entrenamiento = datetime.now()
             st.rerun()
 
 # -----------------------------------------------------------------------------
@@ -941,25 +886,86 @@ elif (
         )
         st.progress((paso_actual + 1) / total_ejercicios)
 
-        # Temporizador
-        renderizar_temporizador_global()
-
     else:
-        # PANTALLA FIN DE ENTRENAMIENTO
+        # PANTALLA FIN DE ENTRENAMIENTO Y BLOQUE COMPLETO DE ESTIRAMIENTOS
         st.balloons()
         st.markdown(
             textwrap.dedent("""
-            <div style="text-align: center; padding: 20px; background-color: #f0fdf4; border-radius: 16px; border: 2px solid #22c55e; margin: 20px 0;">
-                <h2 style="color: #15803d; margin-bottom: 10px;">🎉 ¡Entrenamiento Completado!</h2>
-                <p style="color: #166534; font-size: 1.1rem; font-weight: 600;">Excelente trabajo. Has completado con éxito toda la rutina de hoy.</p>
+            <div style="text-align: center; padding: 20px; background-color: #f0fdf4; border-radius: 16px; border: 2px solid #22c55e; margin: 10px 0 20px 0;">
+                <h2 style="color: #15803d; margin-bottom: 5px;">🎉 ¡Parte Principal Completada!</h2>
+                <p style="color: #166534; font-size: 1.1rem; font-weight: 700;">Has terminado la fase de fuerza. Tómate 10 minutos para la vuelta a la calma.</p>
             </div>
             """),
             unsafe_allow_html=True,
         )
 
-        if st.button("🔄 Volver al inicio / Nueva Rutina", type="primary", use_container_width=True):
+        st.markdown(
+            textwrap.dedent("""
+            <div style="background-color: #0f172a; border-radius: 14px; padding: 16px; border: 2px solid #38bdf8; margin-bottom: 20px;">
+                <h3 style="color: #38bdf8; text-align: center; margin-bottom: 5px; font-weight: 800;">🧘 BLOQUE DE ESTIRAMIENTOS Y VUELTA A LA CALMA</h3>
+                <p style="color: #94a3b8; text-align: center; font-size: 0.9rem; margin-bottom: 0;">Sostén cada postura sin rebotar, manteniendo una respiración diafragmática profunda (4s inhalar, 6s exhalar).</p>
+            </div>
+            """),
+            unsafe_allow_html=True,
+        )
+
+        # Módulos desplegables de estiramiento por zonas
+        with st.expander("🦵 1. Cadena Inferior (Isquios, Isquiotibiales y Cadera)", expanded=True):
+            st.markdown(
+                textwrap.dedent("""
+                * **Estiramiento de Isquiotibiales (De pie o sentado):**
+                    * *Instrucciones:* Con una pierna adelantada y el talón apoyado, inclina la cadera hacia adelante manteniendo la espalda recta hasta sentir tensión suave en la parte posterior del muslo.
+                    * *Dosis:* **2 series × 30-40 segundos** por pierna.
+                * **Flexor de Cadera / Psoas (En zancada baja):**
+                    * *Instrucciones:* Apoya una rodilla en el suelo e impulsa suavemente la cadera hacia adelante manteniendo el tronco vertical.
+                    * *Dosis:* **2 series × 30 segundos** por lado.
+                """),
+                unsafe_allow_html=True,
+            )
+
+        with st.expander("🍑 2. Glúteo y Piramidal", expanded=True):
+            st.markdown(
+                textwrap.dedent("""
+                * **Figura 4 o Glúteo Supino (Tumbado):**
+                    * *Instrucciones:* Tumbado boca arriba, cruza el tobillo sobre la rodilla contraria y abraza el muslo por detrás tirando hacia el pecho.
+                    * *Dosis:* **2 series × 45 segundos** por lado.
+                * **Postura de la Paloma (Yoga):**
+                    * *Instrucciones:* Apoya una pierna flexionada por delante en el suelo y extiende la otra hacia atrás. Inclina el torso suavemente hacia adelante.
+                    * *Dosis:* **1-2 series × 40 segundos** por lado.
+                """),
+                unsafe_allow_html=True,
+            )
+
+        with st.expander("🧘‍♂️ 3. Lumbar, Espalda y Columna", expanded=True):
+            st.markdown(
+                textwrap.dedent("""
+                * **Gato-Vaca (Movilidad Espinal):**
+                    * *Instrucciones:* En cuadrupedia, arquea la columna hacia arriba mirando hacia el ombligo y luego arquea suavemente hacia abajo elevando la mirada.
+                    * *Dosis:* **10 repeticiones lentas y fluidas**.
+                * **Postura del Niño (Child's Pose):**
+                    * *Instrucciones:* Arrodillado, lleva los glúteos hacia los talones y extiende los brazos hacia adelante pegando la frente al suelo.
+                    * *Dosis:* **1 minuto de respiración profunda continua**.
+                """),
+                unsafe_allow_html=True,
+            )
+
+        with st.expander("💪 4. Tren Superior (Pectoral y Hombros)", expanded=False):
+            st.markdown(
+                textwrap.dedent("""
+                * **Estiramiento Pectoral en Marco de Puerta / Pared:**
+                    * *Instrucciones:* Apoya el antebrazo en la pared o marco a 90° y da un paso adelante girando levemente el torso.
+                    * *Dosis:* **2 series × 30 segundos** por lado.
+                * **Cruzado de Hombro Posterior:**
+                    * *Instrucciones:* Pasa un brazo extendido por delante del pecho y usa el otro brazo para presionarlo suavemente hacia el cuerpo.
+                    * *Dosis:* **2 series × 30 segundos** por lado.
+                """),
+                unsafe_allow_html=True,
+            )
+
+        st.markdown("<br>", unsafe_allow_html=True)
+
+        if st.button("🔄 Volver al Inicio / Nueva Rutina", type="primary", use_container_width=True):
             st.session_state.modo_entrenamiento = False
             st.session_state.paso_actual = 0
             st.session_state.df_rutina = None
-            st.session_state.inicio_entrenamiento = None
             st.rerun()
