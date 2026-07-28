@@ -1045,64 +1045,63 @@ elif (
             st.rerun()
 
 # -----------------------------------------------------------------------------
-# 6. MÓDULO EXCLUSIVO DE ESTIRAMIENTOS (10 MINUTOS)
+# BLOQUE: PANTALLA FINAL DE FUERZA Y LANZADOR DE ESTIRAMIENTOS
 # -----------------------------------------------------------------------------
-elif st.session_state.modo_estiramientos:
-    st.markdown(
-        "<h2 style='text-align: center; color: #16a34a;'>🧘 BLOQUE DE ESTIRAMIENTOS FINALES</h2>",
-        unsafe_allow_html=True,
+
+# Lanza la animación de globos en la pantalla
+st.balloons()
+
+# Título de felicitación
+st.markdown(
+    """
+    <div style="text-align: center; padding: 15px 0;">
+        <h2 style="color: #16a34a; font-size: 2.1rem; font-weight: 800;">🎉 ¡BLOQUE DE FUERZA COMPLETADO! 🎉</h2>
+        <h3 style="color: #1e293b; font-size: 1.3rem;">¡Excelente esfuerzo en tu entrenamiento!</h3>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
+
+# Tarjeta informativa sobre los beneficios de estirar
+st.markdown(
+    """
+    <div style="background-color: #f0fdf4; border-left: 5px solid #22c55e; border-radius: 10px; padding: 16px; margin: 15px 0;">
+        <h4 style="color: #15803d; margin-top: 0;">🧘‍♂️ ¿Por qué es vital realizar los estiramientos finales?</h4>
+        <p style="color: #334155; font-size: 0.95rem; line-height: 1.6;">
+            • <b>Normalización del tono muscular:</b> Reduce la hipertonía y contracturas post-esfuerzo.<br>
+            • <b>Recuperación hemodinámica:</b> Facilita el retorno venoso y acelera la eliminación de metabólicos.<br>
+            • <b>Prevención de rigidez articular:</b> Preserva el rango de movimiento articular saludable.<br>
+            • <b>Activación parasimpática:</b> Ayuda al sistema nervioso a pasar de un estado de estrés a la recuperación.
+        </p>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
+
+st.markdown("<br>", unsafe_allow_html=True)
+
+# Botón para activar la sesión de 10 minutos de estiramientos
+if st.button(
+    "🧘 EMPEZAR ESTIRAMIENTOS (10 MIN)",
+    type="primary",
+    use_container_width=True,
+):
+    # Genera 4 estiramientos aleatorios de la base de datos
+    st.session_state.df_estiramientos = obtener_rutina_estiramientos(
+        df_ejercicios, cantidad=4
     )
-    st.markdown(
-        "<p style='text-align: center; color: #64748b;'>Mantén cada posición de forma suave, respirando profundo y sin dolor punzante.</p>",
-        unsafe_allow_html=True,
-    )
+    st.session_state.modo_estiramientos = True
+    st.session_state.modo_entrenamiento = False
+    st.session_state.inicio_estiramientos = datetime.now()
+    st.rerun()
 
-    timer_estiramiento = st.empty()
-    renderizar_temporizador_dinamico(
-        10, st.session_state.inicio_estiramientos, timer_estiramiento
-    )
+st.markdown("---")
 
-    df_est = (
-        st.session_state.df_estiramientos
-        if st.session_state.df_estiramientos is not None
-        else obtener_estiramientos_recomendados(df_ejercicios)
-    )
-
-    for idx, (_, row) in enumerate(df_est.iterrows()):
-        st.markdown(
-            f"### {idx + 1}. {row.get('Nombre', 'Estiramiento Guiado')}"
-        )
-        st.write(
-            "⏱️ **Tiempo sugerido:** 2 series × 30-45 segundos por zona."
-        )
-        desc = str(
-            row.get("Descripcion", "Realiza una extensión/flexión suave.")
-        )
-        st.caption(desc)
-
-        img_col = [
-            str(row[c])
-            for c in ["Imagen_1", "Imagen_2"]
-            if c in row and pd.notna(row[c]) and str(row[c]).strip() not in ["-", ""]
-        ]
-        if img_col:
-            st.image(
-                img_col[0],
-                use_container_width=True,
-                key=f"img_est_{idx}",
-            )
-        st.markdown("---")
-
-    if st.button(
-        "🏆 Finalizar sesión completa", type="primary", use_container_width=True
-    ):
-        st.session_state.paso_actual = 0
-        st.session_state.df_rutina = None
-        st.session_state.df_estiramientos = None
-        st.session_state.modo_entrenamiento = False
-        st.session_state.inicio_entrenamiento = None
-        st.session_state.modo_estiramientos = False
-        st.session_state.inicio_estiramientos = None
-        st.success("¡Excelente trabajo! Sesión finalizada con éxito.")
-        time.sleep(1)
-        st.rerun()
+# Opción alternativa para salir directamente sin estirar
+if st.button("🔄 Finalizar y volver al inicio", use_container_width=True):
+    st.session_state.paso_actual = 0
+    st.session_state.df_rutina = None
+    st.session_state.modo_entrenamiento = False
+    st.session_state.inicio_entrenamiento = None
+    st.session_state.modo_estiramientos = False
+    st.rerun()
