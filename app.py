@@ -215,6 +215,7 @@ with col_usr2:
         st.session_state.paso_actual = 0
         st.session_state.df_rutina = None
         st.session_state.modo_entrenamiento = False
+        st.session_state.modo_estiramientos = False
         st.session_state.inicio_entrenamiento = None
         st.rerun()
 
@@ -493,6 +494,26 @@ def seleccionar_y_estructurar_rutina(df_candidatos, df_base, cantidad_deseada):
     return pd.DataFrame(rutina_final)
 
 
+def obtener_rutina_estiramientos(df_base, cantidad=4):
+    """Filtra y selecciona ejercicios de movilidad / estiramiento de la base de datos."""
+    registros = df_base.to_dict("records")
+    estiramientos = [
+        r
+        for r in registros
+        if any(
+            k in normalizar_texto(str(r.get("Grupo Muscular", "")))
+            or k in normalizar_texto(str(r.get("Nombre", "")))
+            or k in normalizar_texto(str(r.get("Tren", "")))
+            for k in ["estiramiento", "movilidad", "flexibilidad", "relax"]
+        )
+    ]
+    if not estiramientos:
+        estiramientos = registros
+
+    cant_tomar = min(cantidad, len(estiramientos))
+    return pd.DataFrame(estiramientos).sample(n=cant_tomar)
+
+
 def renderizar_temporizador_global():
     """Renderiza el temporizador del entrenamiento con cambio de color según tiempo transcurrido."""
     if "inicio_entrenamiento" not in st.session_state or st.session_state.inicio_entrenamiento is None:
@@ -552,6 +573,8 @@ if "nivel_seleccionado" not in st.session_state:
     st.session_state.nivel_seleccionado = "Básico"
 if "modo_entrenamiento" not in st.session_state:
     st.session_state.modo_entrenamiento = False
+if "modo_estiramientos" not in st.session_state:
+    st.session_state.modo_estiramientos = False
 if "duracion_elegida" not in st.session_state:
     st.session_state.duracion_elegida = "30 min"
 if "inicio_entrenamiento" not in st.session_state:
@@ -568,7 +591,7 @@ st.markdown(
 
 OPCION_BLANCO = "--- Sin filtro (Cualquiera) ---"
 
-if not st.session_state.modo_entrenamiento:
+if not st.session_state.modo_entrenamiento and not st.session_state.modo_estiramientos:
     with st.expander(
         "⚙️ Configurar Parámetros", expanded=(st.session_state.df_rutina is None)
     ):
@@ -804,7 +827,7 @@ if not st.session_state.modo_entrenamiento:
     ):
         df_rutina = st.session_state.df_rutina
         tiempo_ejercicios = st.session_state.tiempo_estimado
-        tiempo_total_sesion = tiempo_ejercicios + TIEMPO_ESTIRAMIENTOS_MIN
+        tiempo_total_sesion = tiempo_ejercicios + 10  # 10 min estiramientos
 
         st.markdown(
             "<h4 style='text-align: center; color: #16a34a;'>🔥 Rutina generada con éxito</h4>",
@@ -827,7 +850,7 @@ if not st.session_state.modo_entrenamiento:
                 f"""
                 <div class="sub-metric-card">
                     <div class="sub-metric-title">🧘 Estiramientos</div>
-                    <div class="sub-metric-value">{TIEMPO_ESTIRAMIENTOS_MIN} min</div>
+                    <div class="sub-metric-value">10 min</div>
                 </div>
                 """,
                 unsafe_allow_html=True,
@@ -991,30 +1014,64 @@ elif (
         st.progress(porcentaje_progreso / 100)
 
     else:
-        # PANTALLA FINAL
+        # -----------------------------------------------------------------------------
+        # BLOQUE: PANTALLA FINAL DE FUERZA Y LANZADOR DE ESTIRAMIENTOS
+        # -----------------------------------------------------------------------------
+
+        # Lanza la animación de globos en la pantalla
         st.balloons()
+
+        # Título de felicitación
         st.markdown(
             """
-            <div style="text-align: center; padding: 20px 0;">
-                <h2 style="color: #16a34a; font-size: 2rem;">🎉 ¡BLOQUE DE FUERZA COMPLETADO! 🎉</h2>
-                <h3 style="color: #1e293b;">Has completado con éxito la sesión</h3>
-                <p style="color: #64748b; font-size: 1.1rem; margin-top: 10px;">
-                    A continuación, procede a realizar el bloque de <b>10 minutos de estiramientos finales</b> para favorecer la recuperación.
+            <div style="text-align: center; padding: 15px 0;">
+                <h2 style="color: #16a34a; font-size: 2.1rem; font-weight: 800;">🎉 ¡BLOQUE DE FUERZA COMPLETADO! 🎉</h2>
+                <h3 style="color: #1e293b; font-size: 1.3rem;">¡Excelente esfuerzo en tu entrenamiento!</h3>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+        # Tarjeta informativa sobre los beneficios de estirar
+        st.markdown(
+            """
+            <div style="background-color: #f0fdf4; border-left: 5px solid #22c55e; border-radius: 10px; padding: 16px; margin: 15px 0;">
+                <h4 style="color: #15803d; margin-top: 0;">🧘‍♂️ ¿Por qué es vital realizar los estiramientos finales?</h4>
+                <p style="color: #334155; font-size: 0.95rem; line-height: 1.6;">
+                    • <b>Normalización del tono muscular:</b> Reduce la hipertonía y contracturas post-esfuerzo.<br>
+                    • <b>Recuperación hemodinámica:</b> Facilita el retorno venoso y acelera la eliminación de metabólicos.<br>
+                    • <b>Prevención de rigidez articular:</b> Preserva el rango de movimiento articular saludable.<br>
+                    • <b>Activación parasimpática:</b> Ayuda al sistema nervioso a pasar de un estado de estrés a la recuperación.
                 </p>
             </div>
             """,
             unsafe_allow_html=True,
         )
 
-        st.markdown("---")
+        st.markdown("<br>", unsafe_allow_html=True)
 
+        # Botón para activar la sesión de 10 minutos de estiramientos
         if st.button(
-            "🔄 Volver al inicio / Crear nueva rutina",
+            "🧘 EMPEZAR ESTIRAMIENTOS (10 MIN)",
             type="primary",
             use_container_width=True,
         ):
+            # Genera 4 estiramientos aleatorios de la base de datos
+            st.session_state.df_estiramientos = obtener_rutina_estiramientos(
+                df_ejercicios, cantidad=4
+            )
+            st.session_state.modo_estiramientos = True
+            st.session_state.modo_entrenamiento = False
+            st.session_state.inicio_estiramientos = datetime.now()
+            st.rerun()
+
+        st.markdown("---")
+
+        # Opción alternativa para salir directamente sin estirar
+        if st.button("🔄 Finalizar y volver al inicio", use_container_width=True):
             st.session_state.paso_actual = 0
             st.session_state.df_rutina = None
             st.session_state.modo_entrenamiento = False
             st.session_state.inicio_entrenamiento = None
+            st.session_state.modo_estiramientos = False
             st.rerun()
