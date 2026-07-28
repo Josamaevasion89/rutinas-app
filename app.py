@@ -204,7 +204,7 @@ if not st.session_state.autenticado:
     st.stop()
 
 # -----------------------------------------------------------------------------
-# 3. CARGA DE DATOS Y LÓGICA AUXILIAR
+# 3. CARGA DE DATOS Y LÓGICA AUXILIAR AVANZADA
 # -----------------------------------------------------------------------------
 
 col_usr1, col_usr2 = st.columns([3, 1])
@@ -288,19 +288,65 @@ def es_ejercicio_unilateral(row):
     return False
 
 
-def obtener_prescripcion(duracion_total_min, categoria, row=None):
-    """Cálculo real de series según la duración elegida y no un valor fijo por defecto."""
-    cat = normalizar_texto(str(categoria))
+def calcular_series_fisiologicas(duracion_total_min, nivel, row):
+    """Cálculo avanzado de series (2, 3 o 4) basado en la demanda metabólica y tiempo disponible."""
+    nombre_norm = normalizar_texto(str(row.get("Nombre", "")))
+    cat_norm = normalizar_texto(
+        str(row.get("Grupo Muscular", row.get("Tren", "")))
+    )
 
-    # Ajuste dinámico de series según el tiempo total disponible
+    # Ejercicios pesados o de demanda neuro-muscular alta
+    es_multiarticular_pesado = any(
+        k in nombre_norm
+        for k in [
+            "sentadilla",
+            "peso muerto",
+            "press",
+            "dominadas",
+            "remo",
+            "hip thrust",
+            "zancada",
+        ]
+    )
+    es_core_movilidad = any(
+        k in cat_norm or k in nombre_norm
+        for k in ["core", "plancha", "abdominal", "movilidad", "estiramiento"]
+    )
+
+    # Matriz Fisiológica de Series
     if duracion_total_min <= 20:
-        num_series = 3
+        if es_core_movilidad:
+            return 2
+        elif es_multiarticular_pesado:
+            return 3
+        else:
+            return 2
     elif duracion_total_min <= 30:
-        num_series = 3
-    else:
-        num_series = 4
+        if es_core_movilidad:
+            return 2
+        elif es_multiarticular_pesado:
+            return 3
+        else:
+            return 3
+    else:  # 45 o 60 min
+        if es_core_movilidad:
+            return 3
+        elif es_multiarticular_pesado:
+            return 4
+        else:
+            return 3
 
-    if "core" in cat:
+
+def obtener_prescripcion_profesional(duracion_total_min, nivel, row=None):
+    if row is None:
+        return "3 series × 10-12 reps"
+
+    num_series = calcular_series_fisiologicas(duracion_total_min, nivel, row)
+    cat = normalizar_texto(str(row.get("Tren", "")))
+
+    if "core" in cat or "core" in normalizar_texto(
+        str(row.get("Grupo Muscular", ""))
+    ):
         reps_texto = "30-45 seg trabajo"
     else:
         if es_ejercicio_unilateral(row):
@@ -311,8 +357,46 @@ def obtener_prescripcion(duracion_total_min, categoria, row=None):
     return f"{num_series} series × {reps_texto}"
 
 
+def alternar_grupos_musculares(df):
+    """Algoritmo de optimización que impide tener 2 ejercicios consecutivos del mismo grupo muscular."""
+    if len(df) <= 2:
+        return df
+
+    df_restante = df.copy().to_dict("records")
+    df_ordenado = []
+
+    # Tomar el primero
+    df_ordenado.append(df_restante.pop(0))
+
+    while df_restante:
+        ultimo_grupo = normalizar_texto(
+            str(
+                df_ordenado[-1].get(
+                    "Grupo Muscular", df_ordenado[-1].get("Tren", "")
+                )
+            )
+        )
+        candidato_idx = -1
+
+        for i, item in enumerate(df_restante):
+            grupo_actual = normalizar_texto(
+                str(item.get("Grupo Muscular", item.get("Tren", "")))
+            )
+            if grupo_actual != ultimo_grupo:
+                candidato_idx = i
+                break
+
+        if candidato_idx != -1:
+            df_ordenado.append(df_restante.pop(candidato_idx))
+        else:
+            # Si no hay alternancia posible, se añade el siguiente disponible
+            df_ordenado.append(df_restante.pop(0))
+
+    return pd.DataFrame(df_ordenado)
+
+
 def renderizar_temporizador_15s(paso_id):
-    """Temporizador nativo de Python con cambio de color en los números (Verde >10s | Rojo <=10s)."""
+    """Temporizador con reset automático a opción inicial tras mostrar GOOO!."""
     key_timer_activo = f"timer_activo_{paso_id}"
     key_timer_inicio = f"timer_inicio_{paso_id}"
 
@@ -342,16 +426,13 @@ def renderizar_temporizador_15s(paso_id):
             st.rerun()
 
     else:
-        # Estado en cuenta regresiva
         tiempo_transcurrido = (
             datetime.now() - st.session_state[key_timer_inicio]
         ).total_seconds()
         tiempo_restante = max(0, int(duracion - tiempo_transcurrido))
 
         if tiempo_restante > 0:
-            # Verde si faltan más de 10 seg, Rojo si restan 10 o menos
             color_numero = "#16a34a" if tiempo_restante > 10 else "#dc2626"
-
             st.markdown(
                 f"""
                 <div style="background-color: #fef08a; border-radius: 12px; padding: 14px; text-align: center; border: 2px solid #facc15; box-shadow: 0 4px 12px rgba(0,0,0,0.08); margin-bottom: 10px;">
@@ -364,7 +445,7 @@ def renderizar_temporizador_15s(paso_id):
             time.sleep(1)
             st.rerun()
         else:
-            # Finalizado (0s -> GO!)
+            # Mostrar GOOO! brevemente y restablecer automáticamente a la pantalla inicial del descanso
             st.markdown(
                 """
                 <div style="background-color: #22c55e; border-radius: 12px; padding: 14px; text-align: center; border: 2px solid #16a34a; box-shadow: 0 4px 12px rgba(0,0,0,0.12); margin-bottom: 10px;">
@@ -374,13 +455,9 @@ def renderizar_temporizador_15s(paso_id):
                 """,
                 unsafe_allow_html=True,
             )
-            if st.button(
-                "🔄 Reiniciar Descanso",
-                key=f"btn_reset_timer_{paso_id}",
-                use_container_width=True,
-            ):
-                st.session_state[key_timer_activo] = False
-                st.rerun()
+            time.sleep(1.5)
+            st.session_state[key_timer_activo] = False
+            st.rerun()
 
 
 # Variables de sesión iniciales
@@ -470,7 +547,6 @@ if not st.session_state.modo_entrenamiento:
         for idx, tiempo_opt in enumerate(opciones_tiempo):
             with cols[idx]:
                 es_activo = st.session_state.duracion_elegida == tiempo_opt
-                # Botón de tiempo seleccionado resaltado en color azul independiente
                 if es_activo:
                     st.markdown(
                         f"""
@@ -577,8 +653,8 @@ if not st.session_state.modo_entrenamiento:
                 )
                 df_filtrado = df_ejercicios.copy()
 
-            # Cálculo real: ~5 minutos promedio por ejercicio (incluyendo 3-4 series + descansos)
-            ejercicios_objetivo = max(2, int(round(duracion_fuerza_min / 5)))
+            # Cálculo óptimo de número de ejercicios según volumen útil
+            ejercicios_objetivo = max(2, int(round(duracion_fuerza_min / 4.5)))
             cantidad_final = min(ejercicios_objetivo, len(df_filtrado))
 
             if cantidad_final > 0:
@@ -587,6 +663,10 @@ if not st.session_state.modo_entrenamiento:
                 )
             else:
                 df_rutina = df_ejercicios.head(2).reset_index(drop=True)
+
+            # Regla Top Mundial: Alternancia de grupos musculares excepto si el usuario filtró explícitamente uno solo
+            if tren_seleccionado == OPCION_BLANCO:
+                df_rutina = alternar_grupos_musculares(df_rutina)
 
             st.session_state.df_rutina = df_rutina
             st.session_state.tiempo_estimado = duracion_fuerza_min
@@ -674,12 +754,12 @@ elif (
             unsafe_allow_html=True,
         )
 
-        # Cálculo dinámico de series según la duración elegida en lugar de 4 fijas
+        # Cálculo dinámico Top Mundial de series/reps
         duracion_min_total = int(
             str(st.session_state.duracion_elegida).split()[0]
         )
-        series_reps = obtener_prescripcion(
-            duracion_min_total, row.get("Tren", ""), row=row
+        series_reps = obtener_prescripcion_profesional(
+            duracion_min_total, st.session_state.nivel_seleccionado, row=row
         )
 
         cols_obj = [
@@ -750,7 +830,7 @@ elif (
             unsafe_allow_html=True,
         )
 
-        # Componente de temporizador con números en verde (>10s) o rojo (<=10s)
+        # Componente de temporizador con reseteo automático tras GOOO!
         renderizar_temporizador_15s(paso_actual)
 
         st.markdown("---")
