@@ -1,7 +1,6 @@
 import time
 import unicodedata
-import urllib.parse
-from datetime import datetime, timedelta
+from datetime import datetime
 
 import pandas as pd
 import streamlit as st
@@ -151,28 +150,6 @@ st.markdown(
         border-radius: 10px;
     }
 
-    /* Estilo botón/tarjeta Cronómetro */
-    div.stButton > button[key^="btn_card_timer_"] {
-        width: 100% !important;
-        background-color: #fef08a !important;
-        border: 2px solid #facc15 !important;
-        border-radius: 14px !important;
-        padding: 16px 12px !important;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.08) !important;
-        cursor: pointer !important;
-        color: #854d0e !important;
-        font-size: 1.1rem !important;
-        font-weight: 900 !important;
-        line-height: 1.4 !important;
-        transition: transform 0.1s ease, background-color 0.1s ease !important;
-    }
-    div.stButton > button[key^="btn_card_timer_"]:hover {
-        background-color: #fde047 !important;
-        border-color: #eab308 !important;
-        color: #713f12 !important;
-        transform: translateY(-2px) !important;
-    }
-
     .stButton > button {
         border-radius: 10px !important;
         font-weight: 600 !important;
@@ -238,6 +215,7 @@ with col_usr2:
         st.session_state.paso_actual = 0
         st.session_state.df_rutina = None
         st.session_state.modo_entrenamiento = False
+        st.session_state.inicio_entrenamiento = None
         st.rerun()
 
 
@@ -376,7 +354,6 @@ def obtener_prescripcion_profesional(duracion_total_min, nivel, row=None):
 
 
 def es_ejercicio_gluteo(row_dict):
-    """Detecta si un ejercicio pertenece al grupo muscular de glúteos."""
     campos = [
         str(row_dict.get("Grupo Muscular", "")),
         str(row_dict.get("Tren", "")),
@@ -397,7 +374,6 @@ def es_ejercicio_gluteo(row_dict):
 
 
 def es_ejercicio_abdominal_core(row_dict):
-    """Detecta si un ejercicio pertenece al grupo de abdominales/core."""
     campos = [
         str(row_dict.get("Grupo Muscular", "")),
         str(row_dict.get("Tren", "")),
@@ -419,17 +395,9 @@ def es_ejercicio_abdominal_core(row_dict):
 
 
 def seleccionar_y_estructurar_rutina(df_candidatos, df_base, cantidad_deseada):
-    """Garantiza:
-
-    1. Inicio OBLIGATORIO con Glúteos.
-    2. Final OBLIGATORIO del bloque de fuerza con Abdominales/Core (justo antes de los estiramientos).
-    3. Ningún ejercicio de Abdominales/Core en medio de la rutina.
-    4. Alternancia de grupos musculares en ejercicios intermedios.
-    """
     todos_registros = df_base.to_dict("records")
     candidatos_registros = df_candidatos.to_dict("records")
 
-    # 1. Búsqueda prioritaria de un ejercicio de Glúteo (Inicio obligatorio)
     gluteos_candidatos = [
         r for r in candidatos_registros if es_ejercicio_gluteo(r)
     ]
@@ -449,7 +417,6 @@ def seleccionar_y_estructurar_rutina(df_candidatos, df_base, cantidad_deseada):
             else todos_registros[0]
         )
 
-    # 2. Búsqueda prioritaria de ejercicios de Core/Abdominales (Final obligatorio)
     core_candidatos = [
         r
         for r in candidatos_registros
@@ -472,7 +439,6 @@ def seleccionar_y_estructurar_rutina(df_candidatos, df_base, cantidad_deseada):
             .to_dict("records")
         )
 
-    # 3. Ejercicios intermedios (EXCLUYENDO estrictamente Abdominales y Glúteos ya usados)
     usados = [ej_gluteo] + ejercicios_core
     cuantos_intermedios = max(0, cantidad_deseada - len(usados))
 
@@ -500,7 +466,6 @@ def seleccionar_y_estructurar_rutina(df_candidatos, df_base, cantidad_deseada):
             .to_dict("records")
         )
 
-    # Alternar grupo muscular en intermedios
     intermedios_ordenados = []
     while intermedios:
         if not intermedios_ordenados:
@@ -524,67 +489,61 @@ def seleccionar_y_estructurar_rutina(df_candidatos, df_base, cantidad_deseada):
         else:
             intermedios_ordenados.append(intermedios.pop(0))
 
-    # Estructura Final Garantizada: [GLÚTEO] + [INTERMEDIOS DE FUERZA] + [ABDOMINALES / CORE AL FINAL]
     rutina_final = [ej_gluteo] + intermedios_ordenados + ejercicios_core
     return pd.DataFrame(rutina_final)
 
 
-def renderizar_temporizador_15s(paso_id):
-    """Crono interactivo unificado sin tags HTML visibles en la etiqueta del botón.
+def renderizar_temporizador_global():
+    """Renderiza el temporizador del entrenamiento con cambio de color según tiempo transcurrido.
 
-    Conserva la pausa de 3.5s tras el final.
+    - Cambia de color de fondo/borde cada 10 minutos.
+    - En los últimos 10 minutos activa fondo amarillo y números rojos.
     """
-    key_timer_activo = f"timer_activo_{paso_id}"
-    key_timer_inicio = f"timer_inicio_{paso_id}"
+    if "inicio_entrenamiento" not in st.session_state or st.session_state.inicio_entrenamiento is None:
+        return
 
-    if key_timer_activo not in st.session_state:
-        st.session_state[key_timer_activo] = False
+    duracion_min_total = int(str(st.session_state.duracion_elegida).split()[0])
+    duracion_segundos_total = duracion_min_total * 60
 
-    duracion = 15
+    tiempo_transcurrido_seg = (datetime.now() - st.session_state.inicio_entrenamiento).total_seconds()
+    tiempo_restante_seg = max(0, int(duracion_segundos_total - tiempo_transcurrido_seg))
 
-    if not st.session_state[key_timer_activo]:
-        texto_boton = "⏱️ DESCANSO ENTRE SERIES: 15s\n👇 (Toca aquí para iniciar cuenta atrás)"
-        if st.button(
-            texto_boton,
-            key=f"btn_card_timer_{paso_id}",
-            use_container_width=True,
-        ):
-            st.session_state[key_timer_activo] = True
-            st.session_state[key_timer_inicio] = datetime.now()
-            st.rerun()
+    minutos_restantes = tiempo_restante_seg // 60
+    segundos_restantes = tiempo_restante_seg % 60
+    formato_tiempo = f"{minutos_restantes:02d}:{segundos_restantes:02d}"
 
+    minutos_transcurridos = int(tiempo_transcurrido_seg // 60)
+
+    # Estilos según el tiempo
+    if tiempo_restante_seg <= 600:  # Últimos 10 minutos
+        bg_color = "#fef08a"      # Fondo amarillo
+        border_color = "#facc15"  # Borde amarillo fuerte
+        text_color = "#dc2626"    # Números rojos
+        label_color = "#854d0e"
     else:
-        tiempo_transcurrido = (
-            datetime.now() - st.session_state[key_timer_inicio]
-        ).total_seconds()
-        tiempo_restante = max(0, int(duracion - tiempo_transcurrido))
+        # Paletas de color dinámicas que varían cada 10 minutos
+        bloque_10min = (minutos_transcurridos // 10) % 4
+        paletas = [
+            {"bg": "#f0f9ff", "border": "#38bdf8", "text": "#0284c7", "label": "#0369a1"},  # Azul
+            {"bg": "#f0fdf4", "border": "#4ade80", "text": "#16a34a", "label": "#15803d"},  # Verde
+            {"bg": "#faf5ff", "border": "#c084fc", "text": "#9333ea", "label": "#6b21a8"},  # Púrpura
+            {"bg": "#fff7ed", "border": "#fb923c", "text": "#ea580c", "label": "#c2410c"},  # Naranja
+        ]
+        p = paletas[bloque_10min]
+        bg_color = p["bg"]
+        border_color = p["border"]
+        text_color = p["text"]
+        label_color = p["label"]
 
-        if tiempo_restante > 0:
-            color_numero = "#16a34a" if tiempo_restante > 10 else "#dc2626"
-            st.markdown(
-                f"""
-                <div style="background-color: #fef08a; border-radius: 14px; padding: 14px; text-align: center; border: 2px solid #facc15; box-shadow: 0 4px 12px rgba(0,0,0,0.08); margin-bottom: 10px;">
-                    <div style="color: #854d0e; font-size: 0.85rem; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase;">PRÓXIMA REPETICIÓN EN...</div>
-                    <div style="color: {color_numero}; font-size: 2.8rem; font-weight: 900; font-family: monospace; line-height: 1;">{tiempo_restante}s</div>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
-            time.sleep(1)
-            st.rerun()
-        else:
-            st.markdown(
-                """
-                <div style="background-color: #22c55e; border-radius: 14px; padding: 16px; text-align: center; border: 2px solid #16a34a; box-shadow: 0 4px 12px rgba(0,0,0,0.12); margin-bottom: 10px;">
-                    <div style="color: #ffffff; font-size: 0.85rem; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase;">¡TIEMPO AGOTADO!</div>
-                    <div style="color: #ffffff; font-size: 2.6rem; font-weight: 900; font-family: monospace; line-height: 1;">GOOOO! 🚀</div>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
-            time.sleep(3.5)
-            st.session_state[key_timer_activo] = False
-            st.rerun()
+    st.markdown(
+        f"""
+        <div style="background-color: {bg_color}; border-radius: 14px; padding: 12px; text-align: center; border: 2px solid {border_color}; box-shadow: 0 4px 12px rgba(0,0,0,0.06); margin: 15px 0;">
+            <div style="color: {label_color}; font-size: 0.85rem; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase;">⏱️ TIEMPO RESTANTE SESIÓN ({duracion_min_total} MIN)</div>
+            <div style="color: {text_color}; font-size: 2.6rem; font-weight: 900; font-family: monospace; line-height: 1; margin-top: 4px;">{formato_tiempo}</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
 
 # Variables de sesión iniciales
@@ -600,6 +559,8 @@ if "modo_entrenamiento" not in st.session_state:
     st.session_state.modo_entrenamiento = False
 if "duracion_elegida" not in st.session_state:
     st.session_state.duracion_elegida = "30 min"
+if "inicio_entrenamiento" not in st.session_state:
+    st.session_state.inicio_entrenamiento = None
 
 # -----------------------------------------------------------------------------
 # 4. CONFIGURADOR DE RUTINA Y CABECERA
@@ -674,15 +635,17 @@ if not st.session_state.modo_entrenamiento:
         for idx, tiempo_opt in enumerate(opciones_tiempo):
             with cols[idx]:
                 es_activo = st.session_state.duracion_elegida == tiempo_opt
+                # RESALTAR EL BOTÓN SELECCIONADO EN VERDE
                 if es_activo:
                     st.markdown(
                         f"""
                         <style>
                         div.stButton > button[key="btn_time_{tiempo_opt}"] {{
-                            background-color: #0284c7 !important;
+                            background-color: #22c55e !important;
                             color: white !important;
-                            border: 1px solid #0369a1 !important;
+                            border: 1px solid #16a34a !important;
                             font-weight: 800 !important;
+                            box-shadow: 0 0 10px rgba(34, 197, 94, 0.4) !important;
                         }}
                         </style>
                         """,
@@ -700,7 +663,7 @@ if not st.session_state.modo_entrenamiento:
         st.markdown(
             f"""
             <div style="text-align: center; margin-top: 10px; margin-bottom: 10px;">
-                <span style="background-color: #0284c7; color: white; padding: 6px 16px; border-radius: 20px; font-weight: 800; font-size: 0.9rem; box-shadow: 0 2px 4px rgba(2,132,199,0.2);">
+                <span style="background-color: #22c55e; color: white; padding: 6px 16px; border-radius: 20px; font-weight: 800; font-size: 0.9rem; box-shadow: 0 2px 4px rgba(34,197,94,0.3);">
                     SELECCIONADO: {st.session_state.duracion_elegida.upper()}
                 </span>
             </div>
@@ -781,7 +744,6 @@ if not st.session_state.modo_entrenamiento:
 
             ejercicios_objetivo = max(2, int(round(duracion_fuerza_min / 4.5)))
 
-            # Algoritmo de estructuración biomecánica garantizado
             df_rutina = seleccionar_y_estructurar_rutina(
                 df_filtrado, df_ejercicios, ejercicios_objetivo
             )
@@ -849,6 +811,8 @@ if not st.session_state.modo_entrenamiento:
         ):
             st.session_state.modo_entrenamiento = True
             st.session_state.paso_actual = 0
+            # Se marca la hora de inicio del temporizador global
+            st.session_state.inicio_entrenamiento = datetime.now()
             st.rerun()
 
 # -----------------------------------------------------------------------------
@@ -947,23 +911,13 @@ elif (
             unsafe_allow_html=True,
         )
 
-        # Crono interactivo unificado
-        renderizar_temporizador_15s(paso_actual)
-
         st.markdown("---")
 
         col_nav1, col_nav2 = st.columns([1, 1])
 
-        # Función auxiliar para limpiar el estado del timer al cambiar de ejercicio
-        def reset_timer(paso):
-            st.session_state[f"timer_activo_{paso}"] = False
-            if f"timer_inicio_{paso}" in st.session_state:
-                del st.session_state[f"timer_inicio_{paso}"]
-
         with col_nav1:
             if paso_actual > 0:
                 if st.button("⬅️ Anterior", use_container_width=True):
-                    reset_timer(paso_actual)
                     st.session_state.paso_actual -= 1
                     st.rerun()
 
@@ -973,55 +927,54 @@ elif (
                 type="primary",
                 use_container_width=True,
             ):
-                reset_timer(paso_actual)
                 st.session_state.paso_actual += 1
                 st.rerun()
 
-        progreso_porcentaje = (
-            float((paso_actual + 1) / total_ejercicios)
-            if total_ejercicios > 0
-            else 1.0
-        )
-        porcentaje_num = int(progreso_porcentaje * 100)
+        # ---------------------------------------------------------------------
+        # TEMPORIZADOR GLOBAL DE SESIÓN (UBICADO ENTRE NAVEGACIÓN Y BARRA)
+        # ---------------------------------------------------------------------
+        renderizar_temporizador_global()
 
+        # BARRA DE PROGRESIÓN
+        porcentaje_progreso = int(((paso_actual + 1) / total_ejercicios) * 100)
         st.markdown(
             f"""
             <div class="progress-card">
                 <div class="progress-header">
-                    <span class="progress-label">Progreso del Entrenamiento</span>
-                    <span class="progress-percentage">{porcentaje_num}%</span>
+                    <span class="progress-label">Ejercicio {paso_actual + 1} de {total_ejercicios}</span>
+                    <span class="progress-percentage">{porcentaje_progreso}% completado</span>
                 </div>
             </div>
             """,
             unsafe_allow_html=True,
         )
-        st.progress(progreso_porcentaje)
+        st.progress(porcentaje_progreso / 100)
 
     else:
-        # PANTALLA DE FINALIZACIÓN Y ESTIRAMIENTOS
+        # PANTALLA FINAL: BLOQUE DE FUERZA COMPLETADO CON GLOBOS ASCENDENTES
+        st.balloons()
         st.markdown(
             """
-            <div style="text-align: center; padding: 20px;">
-                <h2 style="color: #16a34a; font-weight: 800;">🎉 ¡Bloque de Fuerza Completado!</h2>
-                <p style="font-size: 1.1rem; color: #334155;">Has finalizado todos los ejercicios principales de tu rutina.</p>
+            <div style="text-align: center; padding: 20px 0;">
+                <h2 style="color: #16a34a; font-size: 2rem;">🎉 ¡BLOQUE DE FUERZA COMPLETADO! 🎉</h2>
+                <h3 style="color: #1e293b;">Has completado con éxito la sesión</h3>
+                <p style="color: #64748b; font-size: 1.1rem; margin-top: 10px;">
+                    A continuación, procede a realizar el bloque de <b>10 minutos de estiramientos finales</b> para favorecer la recuperación.
+                </p>
             </div>
             """,
             unsafe_allow_html=True,
         )
 
-        st.markdown(
-            """
-            <div class="highlight-card" style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);">
-                <div class="highlight-card-subtitle" style="color: #e0f2fe;">Fase Final Obligatoria</div>
-                <div class="highlight-card-desc" style="font-size: 1.4rem;">🧘 10 Minutos de Estiramientos y Vuelta a la Calma</div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
+        st.markdown("---")
 
-        st.info("Tómate 10 minutos para estirar suavemente los grupos musculares trabajados (glúteos, piernas, torso y abdomen) manteniendo cada posición de 20 a 30 segundos sin dolor.")
-
-        if st.button("🏠 Finalizar y Volver al Inicio", type="primary", use_container_width=True):
-            st.session_state.modo_entrenamiento = False
+        if st.button(
+            "🔄 Volver al inicio / Crear nueva rutina",
+            type="primary",
+            use_container_width=True,
+        ):
             st.session_state.paso_actual = 0
+            st.session_state.df_rutina = None
+            st.session_state.modo_entrenamiento = False
+            st.session_state.inicio_entrenamiento = None
             st.rerun()
