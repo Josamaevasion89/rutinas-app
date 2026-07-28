@@ -137,6 +137,17 @@ st.markdown(
         border-radius: 10px !important;
         font-weight: 600 !important;
     }
+
+    /* RESALTE PARA SELECCIÓN DE TIEMPO */
+    .time-banner-selected {
+        background: #0f172a;
+        border: 3px solid #22c55e;
+        border-radius: 12px;
+        padding: 12px;
+        text-align: center;
+        margin: 15px 0;
+        box-shadow: 0 0 15px rgba(34, 197, 94, 0.3);
+    }
     </style>
 """,
     unsafe_allow_html=True,
@@ -557,45 +568,20 @@ if (
             )
 
         st.markdown("<br>", unsafe_allow_html=True)
-
-        # -----------------------------------------------------------------------------
-        # BLOQUE: SELECTOR DE DURACIÓN CON ALTO IMPACTO VISUAL
-        # -----------------------------------------------------------------------------
-
-        # Estilo CSS adicional para el banner
-        st.markdown(
-            """
-            <style>
-            .time-banner-selected {
-                background: #0f172a;
-                border: 3px solid #22c55e;
-                border-radius: 12px;
-                padding: 12px;
-                text-align: center;
-                margin: 15px 0;
-                box-shadow: 0 0 15px rgba(34, 197, 94, 0.3);
-            }
-            </style>
-        """,
-            unsafe_allow_html=True,
-        )
-
-        # Título del selector
         st.markdown(
             "<p style='text-align: center; font-weight: 900; color: #0f172a; font-size: 1.1rem; margin-bottom: 8px;'>⏱️ TIEMPO DE DURACIÓN DEL ENTRENAMIENTO</p>",
             unsafe_allow_html=True,
         )
 
-        # Renderizado de las 4 columnas de botones
         col_t1, col_t2, col_t3, col_t4 = st.columns(4)
         opciones_tiempo = ["20 min", "30 min", "45 min", "60 min"]
         cols = [col_t1, col_t2, col_t3, col_t4]
 
+        # BOTONES CON VISIBILIDAD REFORZADA
         for idx, tiempo_opt in enumerate(opciones_tiempo):
             with cols[idx]:
                 es_activo = st.session_state.duracion_elegida == tiempo_opt
                 if es_activo:
-                    # Estilo si está seleccionado (Verde fluorescente, borde grueso, sombra neón y efecto escala)
                     st.markdown(
                         f"""
                         <style>
@@ -613,7 +599,6 @@ if (
                         unsafe_allow_html=True,
                     )
                 else:
-                    # Estilo si NO está seleccionado (Fondo oscuro, texto naranja)
                     st.markdown(
                         f"""
                         <style>
@@ -634,12 +619,14 @@ if (
                     )
 
                 if st.button(
-                    tiempo_opt, key=f"btn_time_{tiempo_opt}", use_container_width=True
+                    tiempo_opt,
+                    key=f"btn_time_{tiempo_opt}",
+                    use_container_width=True,
                 ):
                     st.session_state.duracion_elegida = tiempo_opt
                     st.rerun()
 
-        # BANNER INFERIOR DE CONFIRMACIÓN VISUAL
+        # BANNER DE TIEMPO VISIBLE
         st.markdown(
             f"""
             <div class="time-banner-selected">
