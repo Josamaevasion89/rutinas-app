@@ -215,8 +215,8 @@ with col_usr2:
         st.session_state.paso_actual = 0
         st.session_state.df_rutina = None
         st.session_state.modo_entrenamiento = False
-        st.session_state.modo_estiramientos = False
         st.session_state.inicio_entrenamiento = None
+        st.session_state.modo_estiramientos = False
         st.rerun()
 
 
@@ -244,6 +244,32 @@ try:
 except Exception as e:
     st.error(f"Error al cargar 'ejercicios.xlsx': {e}")
     st.stop()
+
+
+def obtener_rutina_estiramientos(df_base, cantidad=4):
+    """Filtra y selecciona ejercicios etiquetados como estiramiento o movilidad."""
+    candidatos = []
+    for r in df_base.to_dict("records"):
+        texto_total = " ".join(
+            [normalizar_texto(str(val)) for val in r.values()]
+        )
+        if any(
+            k in texto_total
+            for k in [
+                "estiramiento",
+                "movilidad",
+                "flexibilidad",
+                "relax",
+                "descomprimir",
+            ]
+        ):
+            candidatos.append(r)
+
+    if not candidatos:
+        candidatos = df_base.to_dict("records")
+
+    cant_tomar = min(cantidad, len(candidatos))
+    return pd.DataFrame(candidatos).sample(n=cant_tomar)
 
 
 def es_ejercicio_unilateral(row):
@@ -494,36 +520,23 @@ def seleccionar_y_estructurar_rutina(df_candidatos, df_base, cantidad_deseada):
     return pd.DataFrame(rutina_final)
 
 
-def obtener_rutina_estiramientos(df_base, cantidad=4):
-    """Filtra y selecciona ejercicios de movilidad / estiramiento de la base de datos."""
-    registros = df_base.to_dict("records")
-    estiramientos = [
-        r
-        for r in registros
-        if any(
-            k in normalizar_texto(str(r.get("Grupo Muscular", "")))
-            or k in normalizar_texto(str(r.get("Nombre", "")))
-            or k in normalizar_texto(str(r.get("Tren", "")))
-            for k in ["estiramiento", "movilidad", "flexibilidad", "relax"]
-        )
-    ]
-    if not estiramientos:
-        estiramientos = registros
-
-    cant_tomar = min(cantidad, len(estiramientos))
-    return pd.DataFrame(estiramientos).sample(n=cant_tomar)
-
-
 def renderizar_temporizador_global():
     """Renderiza el temporizador del entrenamiento con cambio de color según tiempo transcurrido."""
-    if "inicio_entrenamiento" not in st.session_state or st.session_state.inicio_entrenamiento is None:
+    if (
+        "inicio_entrenamiento" not in st.session_state
+        or st.session_state.inicio_entrenamiento is None
+    ):
         return
 
     duracion_min_total = int(str(st.session_state.duracion_elegida).split()[0])
     duracion_segundos_total = duracion_min_total * 60
 
-    tiempo_transcurrido_seg = (datetime.now() - st.session_state.inicio_entrenamiento).total_seconds()
-    tiempo_restante_seg = max(0, int(duracion_segundos_total - tiempo_transcurrido_seg))
+    tiempo_transcurrido_seg = (
+        datetime.now() - st.session_state.inicio_entrenamiento
+    ).total_seconds()
+    tiempo_restante_seg = max(
+        0, int(duracion_segundos_total - tiempo_transcurrido_seg)
+    )
 
     minutos_restantes = tiempo_restante_seg // 60
     segundos_restantes = tiempo_restante_seg % 60
@@ -533,17 +546,37 @@ def renderizar_temporizador_global():
 
     # Estilos según el tiempo
     if tiempo_restante_seg <= 600:  # Últimos 10 minutos
-        bg_color = "#fef08a"      # Fondo amarillo
+        bg_color = "#fef08a"  # Fondo amarillo
         border_color = "#facc15"  # Borde amarillo fuerte
-        text_color = "#dc2626"    # Números rojos
+        text_color = "#dc2626"  # Números rojos
         label_color = "#854d0e"
     else:
         bloque_10min = (minutos_transcurridos // 10) % 4
         paletas = [
-            {"bg": "#f0f9ff", "border": "#38bdf8", "text": "#0284c7", "label": "#0369a1"},  # Azul
-            {"bg": "#f0fdf4", "border": "#4ade80", "text": "#16a34a", "label": "#15803d"},  # Verde
-            {"bg": "#faf5ff", "border": "#c084fc", "text": "#9333ea", "label": "#6b21a8"},  # Púrpura
-            {"bg": "#fff7ed", "border": "#fb923c", "text": "#ea580c", "label": "#c2410c"},  # Naranja
+            {
+                "bg": "#f0f9ff",
+                "border": "#38bdf8",
+                "text": "#0284c7",
+                "label": "#0369a1",
+            },  # Azul
+            {
+                "bg": "#f0fdf4",
+                "border": "#4ade80",
+                "text": "#16a34a",
+                "label": "#15803d",
+            },  # Verde
+            {
+                "bg": "#faf5ff",
+                "border": "#c084fc",
+                "text": "#9333ea",
+                "label": "#6b21a8",
+            },  # Púrpura
+            {
+                "bg": "#fff7ed",
+                "border": "#fb923c",
+                "text": "#ea580c",
+                "label": "#c2410c",
+            },  # Naranja
         ]
         p = paletas[bloque_10min]
         bg_color = p["bg"]
@@ -827,7 +860,7 @@ if not st.session_state.modo_entrenamiento and not st.session_state.modo_estiram
     ):
         df_rutina = st.session_state.df_rutina
         tiempo_ejercicios = st.session_state.tiempo_estimado
-        tiempo_total_sesion = tiempo_ejercicios + 10  # 10 min estiramientos
+        tiempo_total_sesion = tiempo_ejercicios + 10
 
         st.markdown(
             "<h4 style='text-align: center; color: #16a34a;'>🔥 Rutina generada con éxito</h4>",
@@ -847,7 +880,7 @@ if not st.session_state.modo_entrenamiento and not st.session_state.modo_estiram
             )
         with c_m2:
             st.markdown(
-                f"""
+                """
                 <div class="sub-metric-card">
                     <div class="sub-metric-title">🧘 Estiramientos</div>
                     <div class="sub-metric-value">10 min</div>
@@ -993,9 +1026,7 @@ elif (
                 st.session_state.paso_actual += 1
                 st.rerun()
 
-        # ---------------------------------------------------------------------
         # TEMPORIZADOR GLOBAL DE SESIÓN
-        # ---------------------------------------------------------------------
         renderizar_temporizador_global()
 
         # BARRA DE PROGRESIÓN
