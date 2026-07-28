@@ -290,17 +290,17 @@ def obtener_prescripcion(nivel, categoria, row=None):
     cat = normalizar_texto(str(categoria))
     nivel_str = str(nivel)
 
-    if "Basico" in normalizar_texto(nivel_str):
+    if "basico" in normalizar_texto(nivel_str):
         num_series = 3
-    elif "Intermedio" in normalizar_texto(nivel_str):
+    elif "intermedio" in normalizar_texto(nivel_str):
         num_series = 4
     else:
         num_series = 4  # Avanzado u otros
 
     if "core" in cat:
-        if "Basico" in normalizar_texto(nivel_str):
+        if "basico" in normalizar_texto(nivel_str):
             reps_texto = "30 seg trabajo"
-        elif "Intermedio" in normalizar_texto(nivel_str):
+        elif "intermedio" in normalizar_texto(nivel_str):
             reps_texto = "45 seg trabajo"
         else:
             reps_texto = "60 seg trabajo"
@@ -314,14 +314,19 @@ def obtener_prescripcion(nivel, categoria, row=None):
 
 
 def renderizar_temporizador_15s(paso_id):
-    """Componente seguro de temporizador para evitar TypeError/JS crash"""
+    """Componente seguro de temporizador (Fondo amarillo, texto negro, inicio manual)"""
     html_code = f"""
     <!DOCTYPE html>
     <html>
     <head>
         <meta charset="utf-8">
         <style>
-            body {{ margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }}
+            body {{
+                margin: 0;
+                padding: 0;
+                font-family: system-ui, -apple-system, sans-serif;
+                background-color: transparent;
+            }}
             .timer-box {{
                 background-color: #facc15;
                 border-radius: 12px;
@@ -331,7 +336,10 @@ def renderizar_temporizador_15s(paso_id):
                 user-select: none;
                 box-shadow: 0 4px 12px rgba(0,0,0,0.12);
                 border: 2px solid #eab308;
-                transition: all 0.3s ease;
+                transition: transform 0.1s ease, background-color 0.2s ease;
+            }}
+            .timer-box:active {{
+                transform: scale(0.98);
             }}
             .timer-label {{
                 color: #000000;
@@ -343,7 +351,7 @@ def renderizar_temporizador_15s(paso_id):
             }}
             .timer-display {{
                 color: #000000;
-                font-size: 2.8rem;
+                font-size: 2.6rem;
                 font-weight: 900;
                 font-family: monospace;
                 line-height: 1;
@@ -351,8 +359,8 @@ def renderizar_temporizador_15s(paso_id):
         </style>
     </head>
     <body>
-        <div class="timer-box" id="box_{paso_id}" onclick="startTimer_{paso_id}()">
-            <div class="timer-label" id="label_{paso_id}">⏱️ TOCA PARA INICIAR DESCANSO</div>
+        <div class="timer-box" id="box_{paso_id}" onclick="toggleTimer_{paso_id}()">
+            <div class="timer-label" id="label_{paso_id}">⏱️ TOCA PARA INICIAR DESCANSO (15s)</div>
             <div class="timer-display" id="display_{paso_id}">15s</div>
         </div>
 
@@ -361,15 +369,20 @@ def renderizar_temporizador_15s(paso_id):
             let count_{paso_id} = 15;
             let running_{paso_id} = false;
 
-            function startTimer_{paso_id}() {{
-                if (running_{paso_id}) return;
-                
-                running_{paso_id} = true;
-                count_{paso_id} = 15;
-                
+            function toggleTimer_{paso_id}() {{
                 const display = document.getElementById("display_{paso_id}");
                 const label = document.getElementById("label_{paso_id}");
 
+                if (count_{paso_id} <= 0) {{
+                    count_{paso_id} = 15;
+                    label.innerText = "⏱️ TOCA PARA INICIAR DESCANSO (15s)";
+                    display.innerText = "15s";
+                    return;
+                }}
+
+                if (running_{paso_id}) return;
+
+                running_{paso_id} = true;
                 label.innerText = "PRÓXIMA REPETICIÓN EN...";
                 display.innerText = count_{paso_id} + "s";
 
@@ -380,7 +393,7 @@ def renderizar_temporizador_15s(paso_id):
                     }} else {{
                         clearInterval(interval_{paso_id});
                         running_{paso_id} = false;
-                        label.innerText = "⏱️ TOCA PARA INICIAR DESCANSO";
+                        label.innerText = "¡TIEMPO AGOTADO!";
                         display.innerText = "GOOOO! 🚀";
                     }}
                 }}, 1000);
@@ -389,7 +402,9 @@ def renderizar_temporizador_15s(paso_id):
     </body>
     </html>
     """
-    st.components.v1.html(html_code, height=115, key=f"timer_widget_{paso_id}")
+    st.components.v1.html(
+        html_code, height=120, key=f"timer_component_step_{paso_id}"
+    )
 
 
 # Variables de sesión iniciales
@@ -424,7 +439,7 @@ if not st.session_state.modo_entrenamiento:
         col_n1, col_n2, col_n3 = st.columns([1, 1, 1])
 
         with col_n1:
-            # Forzamos los 3 niveles obligatorios y agregamos los extra que vengan en Excel
+            # Lista explícita garantizando Básico, Intermedio y Avanzado
             niveles_base = ["Básico", "Intermedio", "Avanzado"]
             if "Nivel" in df_ejercicios.columns:
                 extra_niveles = [
@@ -472,7 +487,7 @@ if not st.session_state.modo_entrenamiento:
             unsafe_allow_html=True,
         )
 
-        # BOTONES CON RESALTADO CLARO DE SELECCIÓN
+        # BOTONES DE TIEMPO CON VISIBILIDAD MEJORADA
         col_t1, col_t2, col_t3, col_t4 = st.columns(4)
 
         opciones_tiempo = ["20 min", "30 min", "45 min", "60 min"]
@@ -750,7 +765,7 @@ elif (
             unsafe_allow_html=True,
         )
 
-        # Temporizador corregido
+        # Temporizador interactivo seguro
         renderizar_temporizador_15s(paso_actual)
 
         st.markdown("---")
