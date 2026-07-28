@@ -460,25 +460,18 @@ if "duracion_elegida" not in st.session_state:
 # 4. CONFIGURADOR Y VISTA PRINCIPAL
 # =============================================================================
 
-st.markdown(
-    '<div class="header-title" id="inicio-app">🏋️‍♂️ RUTINAS W360 🏋️‍♂️</div>',
-    unsafe_allow_html=True,
-)
+def render_configurador(df_ejercicios):
+    OPCION_BLANCO = "--- Sin filtro (Cualquiera) ---"
 
-OPCION_BLANCO = "--- Sin filtro (Cualquiera) ---"
-
-if not st.session_state.modo_entrenamiento:
     with st.expander(
         "⚙️ Configurar Parámetros", expanded=(st.session_state.df_rutina is None)
     ):
-        col_n1, col_n2, col_n3 = st.columns([1, 1, 1])
-
+        col_n1, col_n2, col_n3 = st.columns(3)
         with col_n1:
             niveles_base = ["Básico", "Intermedio", "Avanzado"]
             nivel_seleccionado = st.selectbox(
                 "Nivel de Exigencia", niveles_base
             )
-
         with col_n2:
             opciones_tren = [
                 OPCION_BLANCO,
@@ -489,7 +482,6 @@ if not st.session_state.modo_entrenamiento:
             tren_seleccionado = st.selectbox(
                 "Estructura Corporal", opciones_tren
             )
-
         with col_n3:
             opciones_objetivo = [
                 OPCION_BLANCO,
@@ -507,7 +499,7 @@ if not st.session_state.modo_entrenamiento:
 
         st.markdown("<br>", unsafe_allow_html=True)
         st.markdown(
-            "<p style='text-align: center; font-weight: 900; color: #0f172a; font-size: 1.1rem; margin-bottom: 8px;'>⏱️ TIEMPO DE DURACIÓN DEL ENTRENAMIENTO</p>",
+            "<p style='text-align: center; font-weight: 900; color: #0f172a; font-size: 1.1rem;'>⏱️ TIEMPO DE DURACIÓN DEL ENTRENAMIENTO</p>",
             unsafe_allow_html=True,
         )
 
@@ -518,7 +510,9 @@ if not st.session_state.modo_entrenamiento:
         for idx, tiempo_opt in enumerate(opciones_tiempo):
             with cols[idx]:
                 es_activo = st.session_state.duracion_elegida == tiempo_opt
+
                 if es_activo:
+                    # Estilo con fondo verde completo, borde destacado y sombra luminosa
                     st.markdown(
                         f"""
                         <style>
@@ -527,15 +521,18 @@ if not st.session_state.modo_entrenamiento:
                             color: #ffffff !important;
                             border: 3px solid #15803d !important;
                             font-weight: 900 !important;
-                            font-size: 1.2rem !important;
-                            box-shadow: 0 0 14px rgba(34, 197, 94, 0.8) !important;
-                            transform: scale(1.03);
+                            box-shadow: 0 0 12px rgba(34, 197, 94, 0.6) !important;
+                        }}
+                        div.stButton > button[key="btn_time_{tiempo_opt}"]:hover {{
+                            background-color: #16a34a !important;
+                            color: #ffffff !important;
                         }}
                         </style>
                         """,
                         unsafe_allow_html=True,
                     )
                 else:
+                    # Estilo por defecto cuando no está activo
                     st.markdown(
                         f"""
                         <style>
@@ -543,8 +540,7 @@ if not st.session_state.modo_entrenamiento:
                             background-color: #0f172a !important;
                             color: #f97316 !important;
                             border: 1px solid #334155 !important;
-                            font-weight: 700 !important;
-                            font-size: 1rem !important;
+                            font-weight: 800 !important;
                         }}
                         div.stButton > button[key="btn_time_{tiempo_opt}"]:hover {{
                             background-color: #ea580c !important;
@@ -560,18 +556,6 @@ if not st.session_state.modo_entrenamiento:
                 ):
                     st.session_state.duracion_elegida = tiempo_opt
                     st.rerun()
-
-        st.markdown(
-            textwrap.dedent(f"""
-            <div style="background: #0f172a; border: 3px solid #22c55e; border-radius: 12px; padding: 12px; text-align: center; margin: 15px 0; box-shadow: 0 0 15px rgba(34, 197, 94, 0.3);">
-                <span style="color: #94a3b8; font-weight: 800; font-size: 0.85rem; letter-spacing: 1px; text-transform: uppercase;">DURACIÓN SELECCIONADA</span><br>
-                <span style="color: #22c55e; font-weight: 900; font-size: 1.8rem; letter-spacing: 0.5px;">
-                    🎯 {st.session_state.duracion_elegida.upper()}
-                </span>
-            </div>
-            """),
-            unsafe_allow_html=True,
-        )
 
         duracion_minutos_total = int(
             str(st.session_state.duracion_elegida).split()[0]
@@ -635,7 +619,7 @@ if not st.session_state.modo_entrenamiento:
 
             if df_filtrado.empty:
                 st.warning(
-                    "⚠️ No hay suficientes ejercicios específicos con todos esos filtros. Mostrando ejercicios generales compatibles."
+                    "⚠️ Sin coincidencias exactas. Aplicando filtros generales."
                 )
                 df_filtrado = df_ejercicios.copy()
 
@@ -655,56 +639,20 @@ if not st.session_state.modo_entrenamiento:
         st.session_state.df_rutina is not None
         and not st.session_state.df_rutina.empty
     ):
-        df_rutina = st.session_state.df_rutina
-        tiempo_ejercicios = st.session_state.tiempo_estimado
-        tiempo_total_sesion = tiempo_ejercicios + 10
-
+        tiempo_fuerza = st.session_state.tiempo_estimado
         st.markdown(
-            "<h4 style='text-align: center; color: #16a34a;'>🔥 Rutina generada con éxito</h4>",
+            f"""
+            <div class="sub-metric-card"><b>Fuerza:</b> {tiempo_fuerza} min | <b>Estiramientos:</b> 10 min</div>
+            <div class="highlight-card"><div class="highlight-card-desc">Duración Total: {tiempo_fuerza + 10} min</div></div>
+            """,
             unsafe_allow_html=True,
         )
-
-        c_m1, c_m2 = st.columns(2)
-        with c_m1:
-            st.markdown(
-                textwrap.dedent(f"""
-                <div class="sub-metric-card">
-                    <div class="sub-metric-title">🏋️ Fuerza ({len(df_rutina)} ej.)</div>
-                    <div class="sub-metric-value">{tiempo_ejercicios} min</div>
-                </div>
-                """),
-                unsafe_allow_html=True,
-            )
-        with c_m2:
-            st.markdown(
-                textwrap.dedent("""
-                <div class="sub-metric-card">
-                    <div class="sub-metric-title">🧘 Estiramientos</div>
-                    <div class="sub-metric-value">10 min</div>
-                </div>
-                """),
-                unsafe_allow_html=True,
-            )
-
-        st.markdown(
-            textwrap.dedent(f"""
-            <div class="highlight-card">
-                <div class="highlight-card-subtitle">Tiempo Total Sesión</div>
-                <div class="highlight-card-desc" style="font-size: 1.8rem; font-weight: 800; color: #38bdf8;">{tiempo_total_sesion} min</div>
-            </div>
-            """),
-            unsafe_allow_html=True,
-        )
-
-        st.markdown("<br>", unsafe_allow_html=True)
-
         if st.button(
             "🚀 Comenzar Ahora", type="primary", use_container_width=True
         ):
             st.session_state.modo_entrenamiento = True
             st.session_state.paso_actual = 0
             st.rerun()
-
 # =============================================================================
 # 5. MODO ENTRENAMIENTO GUIADO Y BLOQUE FINAL DE ESTIRAMIENTOS
 # =============================================================================
