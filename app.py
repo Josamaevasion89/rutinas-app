@@ -47,13 +47,13 @@ st.markdown(
         margin-bottom: 10px;
     }
 
-    /* Botón Generar Rutina compacto */
+    /* Botón Generar Rutina */
     div.stButton > button[key="btn_generar"] {
         width: 100% !important;
-        padding: 8px 16px !important;
-        font-size: 15px !important;
+        padding: 10px 16px !important;
+        font-size: 16px !important;
         border-radius: 20px !important;
-        font-weight: 700 !important;
+        font-weight: 800 !important;
     }
 
     /* Métricas Secundarias */
@@ -288,24 +288,20 @@ def es_ejercicio_unilateral(row):
     return False
 
 
-def obtener_prescripcion(nivel, categoria, row=None):
+def obtener_prescripcion(duracion_total_min, categoria, row=None):
+    """Cálculo real de series según la duración elegida y no un valor fijo por defecto."""
     cat = normalizar_texto(str(categoria))
-    nivel_str = str(nivel)
 
-    if "Basico" in normalizar_texto(nivel_str):
+    # Ajuste dinámico de series según el tiempo total disponible
+    if duracion_total_min <= 20:
         num_series = 3
-    elif "Intermedio" in normalizar_texto(nivel_str):
-        num_series = 4
+    elif duracion_total_min <= 30:
+        num_series = 3
     else:
-        num_series = 4  # Avanzado u otros
+        num_series = 4
 
     if "core" in cat:
-        if "Basico" in normalizar_texto(nivel_str):
-            reps_texto = "30 seg trabajo"
-        elif "Intermedio" in normalizar_texto(nivel_str):
-            reps_texto = "45 seg trabajo"
-        else:
-            reps_texto = "60 seg trabajo"
+        reps_texto = "30-45 seg trabajo"
     else:
         if es_ejercicio_unilateral(row):
             reps_texto = "8-10 reps / lado"
@@ -316,10 +312,7 @@ def obtener_prescripcion(nivel, categoria, row=None):
 
 
 def renderizar_temporizador_15s(paso_id):
-    """Componente seguro de temporizador basado en Python / Streamlit sin JS directo.
-
-    No canibaliza otras variables del session_state al usar un ID único por paso/ejercicio.
-    """
+    """Temporizador nativo de Python con cambio de color en los números (Verde >10s | Rojo <=10s)."""
     key_timer_activo = f"timer_activo_{paso_id}"
     key_timer_inicio = f"timer_inicio_{paso_id}"
 
@@ -332,9 +325,9 @@ def renderizar_temporizador_15s(paso_id):
         # Estado inicial / Inactivo
         st.markdown(
             """
-            <div style="background-color: #facc15; border-radius: 12px; padding: 14px; text-align: center; border: 2px solid #eab308; box-shadow: 0 4px 12px rgba(0,0,0,0.12); margin-bottom: 10px;">
-                <div style="color: #000; font-size: 0.85rem; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase;">⏱️ DESCANSO ENTRE SERIES</div>
-                <div style="color: #000; font-size: 2.8rem; font-weight: 900; font-family: monospace; line-height: 1;">15s</div>
+            <div style="background-color: #fef08a; border-radius: 12px; padding: 14px; text-align: center; border: 2px solid #facc15; box-shadow: 0 4px 12px rgba(0,0,0,0.08); margin-bottom: 10px;">
+                <div style="color: #854d0e; font-size: 0.85rem; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase;">⏱️ DESCANSO ENTRE SERIES</div>
+                <div style="color: #16a34a; font-size: 2.8rem; font-weight: 900; font-family: monospace; line-height: 1;">15s</div>
             </div>
             """,
             unsafe_allow_html=True,
@@ -349,18 +342,21 @@ def renderizar_temporizador_15s(paso_id):
             st.rerun()
 
     else:
-        # Estado en cuenta regresiva / Finalizado
+        # Estado en cuenta regresiva
         tiempo_transcurrido = (
             datetime.now() - st.session_state[key_timer_inicio]
         ).total_seconds()
         tiempo_restante = max(0, int(duracion - tiempo_transcurrido))
 
         if tiempo_restante > 0:
+            # Verde si faltan más de 10 seg, Rojo si restan 10 o menos
+            color_numero = "#16a34a" if tiempo_restante > 10 else "#dc2626"
+
             st.markdown(
                 f"""
-                <div style="background-color: #facc15; border-radius: 12px; padding: 14px; text-align: center; border: 2px solid #eab308; box-shadow: 0 4px 12px rgba(0,0,0,0.12); margin-bottom: 10px;">
-                    <div style="color: #000; font-size: 0.85rem; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase;">PRÓXIMA REPETICIÓN EN...</div>
-                    <div style="color: #000; font-size: 2.8rem; font-weight: 900; font-family: monospace; line-height: 1;">{tiempo_restante}s</div>
+                <div style="background-color: #fef08a; border-radius: 12px; padding: 14px; text-align: center; border: 2px solid #facc15; box-shadow: 0 4px 12px rgba(0,0,0,0.08); margin-bottom: 10px;">
+                    <div style="color: #854d0e; font-size: 0.85rem; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase;">PRÓXIMA REPETICIÓN EN...</div>
+                    <div style="color: {color_numero}; font-size: 2.8rem; font-weight: 900; font-family: monospace; line-height: 1;">{tiempo_restante}s</div>
                 </div>
                 """,
                 unsafe_allow_html=True,
@@ -368,7 +364,7 @@ def renderizar_temporizador_15s(paso_id):
             time.sleep(1)
             st.rerun()
         else:
-            # Estado cero / GO!
+            # Finalizado (0s -> GO!)
             st.markdown(
                 """
                 <div style="background-color: #22c55e; border-radius: 12px; padding: 14px; text-align: center; border: 2px solid #16a34a; box-shadow: 0 4px 12px rgba(0,0,0,0.12); margin-bottom: 10px;">
@@ -474,20 +470,35 @@ if not st.session_state.modo_entrenamiento:
         for idx, tiempo_opt in enumerate(opciones_tiempo):
             with cols[idx]:
                 es_activo = st.session_state.duracion_elegida == tiempo_opt
-                tipo_btn = "primary" if es_activo else "secondary"
+                # Botón de tiempo seleccionado resaltado en color azul independiente
+                if es_activo:
+                    st.markdown(
+                        f"""
+                        <style>
+                        div.stButton > button[key="btn_time_{tiempo_opt}"] {{
+                            background-color: #0284c7 !important;
+                            color: white !important;
+                            border: 1px solid #0369a1 !important;
+                            font-weight: 800 !important;
+                        }}
+                        </style>
+                        """,
+                        unsafe_allow_html=True,
+                    )
+
                 if st.button(
                     tiempo_opt,
                     key=f"btn_time_{tiempo_opt}",
-                    type=tipo_btn,
                     use_container_width=True,
                 ):
                     st.session_state.duracion_elegida = tiempo_opt
                     st.rerun()
 
+        # Badge Azul Independiente
         st.markdown(
             f"""
             <div style="text-align: center; margin-top: 10px; margin-bottom: 10px;">
-                <span style="background-color: #0284c7; color: white; padding: 6px 16px; border-radius: 20px; font-weight: 800; font-size: 0.9rem;">
+                <span style="background-color: #0284c7; color: white; padding: 6px 16px; border-radius: 20px; font-weight: 800; font-size: 0.9rem; box-shadow: 0 2px 4px rgba(2,132,199,0.2);">
                     SELECCIONADO: {st.session_state.duracion_elegida.upper()}
                 </span>
             </div>
@@ -566,7 +577,8 @@ if not st.session_state.modo_entrenamiento:
                 )
                 df_filtrado = df_ejercicios.copy()
 
-            ejercicios_objetivo = max(2, int(round(duracion_fuerza_min / 4)))
+            # Cálculo real: ~5 minutos promedio por ejercicio (incluyendo 3-4 series + descansos)
+            ejercicios_objetivo = max(2, int(round(duracion_fuerza_min / 5)))
             cantidad_final = min(ejercicios_objetivo, len(df_filtrado))
 
             if cantidad_final > 0:
@@ -603,7 +615,7 @@ if not st.session_state.modo_entrenamiento:
             st.markdown(
                 f"""
                 <div class="sub-metric-card">
-                    <div class="sub-metric-title">🏋️ Fuerza</div>
+                    <div class="sub-metric-title">🏋️ Fuerza ({len(df_rutina)} ej.)</div>
                     <div class="sub-metric-value">{tiempo_ejercicios} min</div>
                 </div>
                 """,
@@ -655,7 +667,6 @@ elif (
 
     if paso_actual < total_ejercicios:
         row = df_rutina.iloc[paso_actual]
-        nivel_sel = st.session_state.nivel_seleccionado
 
         nombre_ej = str(row.get("Nombre", f"Ejercicio {paso_actual + 1}"))
         st.markdown(
@@ -663,8 +674,12 @@ elif (
             unsafe_allow_html=True,
         )
 
+        # Cálculo dinámico de series según la duración elegida en lugar de 4 fijas
+        duracion_min_total = int(
+            str(st.session_state.duracion_elegida).split()[0]
+        )
         series_reps = obtener_prescripcion(
-            nivel_sel, row.get("Tren", ""), row=row
+            duracion_min_total, row.get("Tren", ""), row=row
         )
 
         cols_obj = [
@@ -735,7 +750,7 @@ elif (
             unsafe_allow_html=True,
         )
 
-        # Inserción del nuevo temporizador nativo en Python
+        # Componente de temporizador con números en verde (>10s) o rojo (<=10s)
         renderizar_temporizador_15s(paso_actual)
 
         st.markdown("---")
