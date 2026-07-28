@@ -422,13 +422,14 @@ def seleccionar_y_estructurar_rutina(df_candidatos, df_base, cantidad_deseada):
     """Garantiza:
 
     1. Inicio OBLIGATORIO con Glúteos.
-    2. Final OBLIGATORIO del bloque de fuerza con Abdominales/Core.
-    3. Alternancia en ejercicios intermedios.
+    2. Final OBLIGATORIO del bloque de fuerza con Abdominales/Core (justo antes de los estiramientos).
+    3. Ningún ejercicio de Abdominales/Core en medio de la rutina.
+    4. Alternancia de grupos musculares en ejercicios intermedios.
     """
     todos_registros = df_base.to_dict("records")
     candidatos_registros = df_candidatos.to_dict("records")
 
-    # 1. Búsqueda prioritaria de un ejercicio de Glúteo
+    # 1. Búsqueda prioritaria de un ejercicio de Glúteo (Inicio obligatorio)
     gluteos_candidatos = [
         r for r in candidatos_registros if es_ejercicio_gluteo(r)
     ]
@@ -448,7 +449,7 @@ def seleccionar_y_estructurar_rutina(df_candidatos, df_base, cantidad_deseada):
             else todos_registros[0]
         )
 
-    # 2. Búsqueda prioritaria de ejercicios de Core/Abdominales
+    # 2. Búsqueda prioritaria de ejercicios de Core/Abdominales (Final obligatorio)
     core_candidatos = [
         r
         for r in candidatos_registros
@@ -471,13 +472,21 @@ def seleccionar_y_estructurar_rutina(df_candidatos, df_base, cantidad_deseada):
             .to_dict("records")
         )
 
-    # 3. Ejercicios intermedios
+    # 3. Ejercicios intermedios (EXCLUYENDO estrictamente Abdominales y Glúteos ya usados)
     usados = [ej_gluteo] + ejercicios_core
     cuantos_intermedios = max(0, cantidad_deseada - len(usados))
 
-    resto_candidatos = [r for r in candidatos_registros if r not in usados]
+    resto_candidatos = [
+        r
+        for r in candidatos_registros
+        if r not in usados and not es_ejercicio_abdominal_core(r)
+    ]
     if len(resto_candidatos) < cuantos_intermedios:
-        resto_base = [r for r in todos_registros if r not in usados]
+        resto_base = [
+            r
+            for r in todos_registros
+            if r not in usados and not es_ejercicio_abdominal_core(r)
+        ]
         resto_candidatos.extend(
             [r for r in resto_base if r not in resto_candidatos]
         )
@@ -515,7 +524,7 @@ def seleccionar_y_estructurar_rutina(df_candidatos, df_base, cantidad_deseada):
         else:
             intermedios_ordenados.append(intermedios.pop(0))
 
-    # Estructura Final Garantizada: [GLÚTEO] + [INTERMEDIOS] + [ABDOMINALES]
+    # Estructura Final Garantizada: [GLÚTEO] + [INTERMEDIOS DE FUERZA] + [ABDOMINALES / CORE AL FINAL]
     rutina_final = [ej_gluteo] + intermedios_ordenados + ejercicios_core
     return pd.DataFrame(rutina_final)
 
@@ -938,16 +947,23 @@ elif (
             unsafe_allow_html=True,
         )
 
-        # Crono interactivo
+        # Crono interactivo unificado
         renderizar_temporizador_15s(paso_actual)
 
         st.markdown("---")
 
         col_nav1, col_nav2 = st.columns([1, 1])
 
+        # Función auxiliar para limpiar el estado del timer al cambiar de ejercicio
+        def reset_timer(paso):
+            st.session_state[f"timer_activo_{paso}"] = False
+            if f"timer_inicio_{paso}" in st.session_state:
+                del st.session_state[f"timer_inicio_{paso}"]
+
         with col_nav1:
             if paso_actual > 0:
                 if st.button("⬅️ Anterior", use_container_width=True):
+                    reset_timer(paso_actual)
                     st.session_state.paso_actual -= 1
                     st.rerun()
 
@@ -957,6 +973,7 @@ elif (
                 type="primary",
                 use_container_width=True,
             ):
+                reset_timer(paso_actual)
                 st.session_state.paso_actual += 1
                 st.rerun()
 
@@ -971,70 +988,40 @@ elif (
             f"""
             <div class="progress-card">
                 <div class="progress-header">
-                    <div class="progress-label">🔥 Ejercicio {paso_actual + 1} de {total_ejercicios}</div>
-                    <div class="progress-percentage">{porcentaje_num}% completado</div>
+                    <span class="progress-label">Progreso del Entrenamiento</span>
+                    <span class="progress-percentage">{porcentaje_num}%</span>
                 </div>
             </div>
             """,
             unsafe_allow_html=True,
         )
-        st.progress(min(progreso_porcentaje, 1.0))
-
-    elif paso_actual == total_ejercicios:
-        st.markdown(
-            '<div class="exercise-title">🧘 Bloque de Enfriamiento y Estiramientos</div>',
-            unsafe_allow_html=True,
-        )
-        st.markdown(
-            """
-        <div style="text-align: center;">
-            <p>🧘‍♂️ <b>Isquiotibiales y Cuádriceps:</b> 2 series de 30 seg por pierna.</p>
-            <p>🧘‍♀️ <b>Pectorales:</b> 2 series de 30 seg contra pared.</p>
-            <p>🧘‍♂️ <b>Glúteos:</b> 2 series de 30 seg por lado.</p>
-            <p>🧘‍♀️ <b>Cobra / Lumbar:</b> 2 series de 30 seg suave.</p>
-        </div>
-        """,
-            unsafe_allow_html=True,
-        )
-
-        st.markdown("---")
-        col_nav1, col_nav2 = st.columns([1, 1])
-        with col_nav1:
-            if st.button("⬅️ Anterior", use_container_width=True):
-                st.session_state.paso_actual -= 1
-                st.rerun()
-        with col_nav2:
-            if st.button(
-                "🏁 Finalizar Entrenamiento",
-                type="primary",
-                use_container_width=True,
-            ):
-                st.session_state.paso_actual += 1
-                st.rerun()
-
-        st.markdown(
-            """
-            <div class="progress-card">
-                <div class="progress-header">
-                    <div class="progress-label">🏁 Bloque Final: Estiramientos</div>
-                    <div class="progress-percentage">100% completado</div>
-                </div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-        st.progress(1.0)
+        st.progress(progreso_porcentaje)
 
     else:
-        st.balloons()
+        # PANTALLA DE FINALIZACIÓN Y ESTIRAMIENTOS
         st.markdown(
-            "<h3 style='text-align: center; color: #16a34a;'>🎉 ¡Entrenamiento completado con éxito!</h3>",
+            """
+            <div style="text-align: center; padding: 20px;">
+                <h2 style="color: #16a34a; font-weight: 800;">🎉 ¡Bloque de Fuerza Completado!</h2>
+                <p style="font-size: 1.1rem; color: #334155;">Has finalizado todos los ejercicios principales de tu rutina.</p>
+            </div>
+            """,
             unsafe_allow_html=True,
         )
-        st.markdown("---")
-        if st.button(
-            "🔄 Volver al Menú", type="primary", use_container_width=True
-        ):
-            st.session_state.paso_actual = 0
+
+        st.markdown(
+            """
+            <div class="highlight-card" style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);">
+                <div class="highlight-card-subtitle" style="color: #e0f2fe;">Fase Final Obligatoria</div>
+                <div class="highlight-card-desc" style="font-size: 1.4rem;">🧘 10 Minutos de Estiramientos y Vuelta a la Calma</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+        st.info("Tómate 10 minutos para estirar suavemente los grupos musculares trabajados (glúteos, piernas, torso y abdomen) manteniendo cada posición de 20 a 30 segundos sin dolor.")
+
+        if st.button("🏠 Finalizar y Volver al Inicio", type="primary", use_container_width=True):
             st.session_state.modo_entrenamiento = False
+            st.session_state.paso_actual = 0
             st.rerun()
